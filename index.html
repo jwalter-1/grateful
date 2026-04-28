@@ -1075,4 +1075,894 @@
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
       </svg>
     </button>
-    <svg class="header-icon" width="44" h
+    <svg class="header-icon" width="44" height="40" viewBox="0 0 44 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display: block; margin: 0 auto 8px;">
+      <path d="M22 16C22 16 18 12 10 12C8 12 6 13 6 15V32C6 34 8 34 10 34C18 34 22 38 22 38" fill="var(--gold)" opacity="0.1"/>
+      <path d="M22 16C22 16 26 12 34 12C36 12 38 13 38 15V32C38 34 36 34 34 34C26 34 22 38 22 38" fill="var(--gold)" opacity="0.1"/>
+      <path d="M22 16C22 16 18 12 10 12C8 12 6 13 6 15V32C6 34 8 34 10 34C18 34 22 38 22 38" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M22 16C22 16 26 12 34 12C36 12 38 13 38 15V32C38 34 36 34 34 34C26 34 22 38 22 38" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M22 16V38" stroke="var(--gold)" stroke-width="1.2" stroke-linecap="round"/>
+      <path d="M36 2C33 4 29 9 27 14L26 17L28 16C30 14 32 12 32 12L31 11C31 11 34 7 37 4C38 3 37.5 1.5 36 2Z" fill="var(--gold)" opacity="0.25" stroke="var(--gold)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1>Grateful</h1>
+    <p id="greeting">A moment of reflection, every day</p>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('journal')" id="tabJournal">
+      <span class="tab-icon">&#9998;</span> Journal
+    </button>
+    <button class="tab-btn" onclick="switchTab('community')" id="tabCommunity">
+      <span class="tab-icon">&#127758;</span> Community
+      <span class="tab-badge" id="communityBadge" style="display:none;">0</span>
+    </button>
+  </div>
+
+  <!-- ==================== JOURNAL TAB ==================== -->
+  <div class="tab-content active" id="journalTab">
+
+    <!-- Consolidated Streak + Stats Card -->
+    <div class="streak-stats-card" id="streakStatsCard">
+      <div class="streak-section">
+        <div class="streak-flame" id="streakFlame">&#128293;</div>
+        <div class="streak-text">
+          <div class="streak-count" id="streakCount">0</div>
+          <div class="streak-label">day streak</div>
+        </div>
+      </div>
+      <div class="stats-section">
+        <div class="stat-mini">
+          <div class="stat-mini-value" id="totalEntries">0</div>
+          <div class="stat-mini-label">Entries</div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-value" id="thisWeek">0</div>
+          <div class="stat-mini-label">This Week</div>
+        </div>
+        <div class="stat-mini">
+          <div class="stat-mini-value" id="thisMonth">0</div>
+          <div class="stat-mini-label">This Month</div>
+        </div>
+      </div>
+      <div class="stat-best">
+        <div class="stat-best-value" id="bestStreak">0</div>
+        <div class="stat-best-label">Best Streak</div>
+      </div>
+    </div>
+
+    <!-- Entry Card -->
+    <div class="card entry-section" id="entryCard">
+      <div class="card-title">Today's Gratitude</div>
+      <div class="entry-date" id="entryDate"></div>
+
+      <div id="todayDone" class="today-done" style="display: none;">
+        <div class="today-done-icon">&#10003;</div>
+        <div>
+          <div class="today-done-text">You've reflected today</div>
+          <div class="today-done-entry" id="todayEntryPreview"></div>
+        </div>
+      </div>
+
+      <div id="entryForm">
+        <div class="prompt-chip" id="promptChip" onclick="generatePrompt()">
+          &#10024; Need inspiration? Tap for a prompt
+        </div>
+        <textarea class="entry-textarea" id="entryInput"
+          placeholder="What are you grateful for today?" maxlength="1000"></textarea>
+        <!-- Share dropdown (collapsed) -->
+        <div class="share-dropdown" id="shareDropdown">
+          <div class="share-dropdown-header" onclick="toggleShareDropdown()">
+            <span class="share-dropdown-icon">&#127760;</span>
+            <span class="share-dropdown-label">Sharing:</span>
+            <span class="share-dropdown-value" id="shareDropdownValue">All Communities</span>
+            <span class="share-dropdown-chevron">&#9660;</span>
+          </div>
+          <div class="share-dropdown-options" id="shareDropdownOptions">
+            <div class="share-option" data-value="private" onclick="selectShareOption('private')">
+              <div class="share-option-radio"></div>
+              <span class="share-option-icon">&#128274;</span>
+              <span class="share-option-text">Private — only you</span>
+            </div>
+            <div class="share-option selected" data-value="all" onclick="selectShareOption('all')">
+              <div class="share-option-radio"></div>
+              <span class="share-option-icon">&#127760;</span>
+              <span class="share-option-text">All Communities</span>
+            </div>
+          </div>
+        </div>
+        <div class="entry-actions">
+          <button class="btn btn-primary" id="saveBtn" onclick="saveEntry()">
+            Save entry &#10140;
+          </button>
+        </div>
+      </div>
+
+      <div id="addMoreWrap" style="display: none; margin-top: 12px;">
+        <button class="btn btn-secondary" onclick="showEntryForm()" style="width: 100%; justify-content: center;">
+          &#43; Add another thought
+        </button>
+      </div>
+    </div>
+
+    <!-- Random Recall -->
+    <div class="card recall-card" id="recallCard">
+      <div class="card-title">&#127808; A Moment to Remember</div>
+      <div id="recallContent">
+        <div class="recall-empty">Start journaling to unlock memories here.</div>
+      </div>
+      <div class="recall-footer" id="recallFooter" style="display: none;">
+        <button class="btn btn-secondary" onclick="showRandomRecall()">&#10227; Another memory</button>
+      </div>
+    </div>
+
+    <!-- Quote -->
+    <div class="card quote-card" id="quoteCard">
+      <div class="quote-text" id="quoteText"></div>
+      <div class="quote-author" id="quoteAuthor"></div>
+    </div>
+
+    <!-- History -->
+    <div class="card" id="historyCard">
+      <div class="card-title">Recent Reflections</div>
+      <div id="historyList"></div>
+      <div id="historyToggle" style="display: none; margin-top: 12px; text-align: center;">
+        <button class="btn btn-secondary" onclick="toggleHistory()" style="width: 100%; justify-content: center;"></button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==================== COMMUNITY TAB ==================== -->
+  <div class="tab-content" id="communityTab">
+
+    <div class="community-header">
+      <h2>Community Gratitude</h2>
+      <p class="community-subtitle">Share your gratitude practice with others</p>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="card">
+      <div class="card-title">Your Profile</div>
+      <div class="profile-section">
+        <div class="profile-avatar" id="profileAvatar">?</div>
+        <div class="profile-info">
+          <input type="text" class="profile-name-input" id="displayName" placeholder="Enter your name" maxlength="30" onchange="saveDisplayName()">
+          <div class="profile-stat" id="sharedCount">0 entries shared</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Community Actions -->
+    <div class="card">
+      <div class="card-title">Share & Connect</div>
+      <div class="community-actions">
+        <button class="btn btn-primary" onclick="exportSharedEntries()">
+          &#128228; Export my entries
+        </button>
+        <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">
+          &#128229; Import friend's entries
+        </button>
+        <input type="file" id="importFile" class="file-input-hidden" accept=".json" onchange="importEntries(event)">
+      </div>
+    </div>
+
+    <!-- Community Members -->
+    <div class="card" id="membersCard">
+      <div class="card-title">Community Members</div>
+      <div id="membersList" class="members-list">
+        <div class="community-empty">Import a friend's entries to see them here.</div>
+      </div>
+    </div>
+
+    <!-- Community Feed -->
+    <div class="card" id="feedCard">
+      <div class="card-title">Community Feed</div>
+      <div id="communityFeed">
+        <div class="community-empty">Share entries and import friends to see the feed.</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // =========================================
+  //  THEME
+  // =========================================
+  function initTheme() {
+    const saved = localStorage.getItem('grateful_theme');
+    if (saved) {
+      setTheme(saved);
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+    } else {
+      setTheme('light');
+    }
+  }
+
+  function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('grateful_theme', theme);
+    updateThemeToggleIcon(theme);
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = current === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+  }
+
+  function updateThemeToggleIcon(theme) {
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+    if (theme === 'dark') {
+      sunIcon.style.display = 'block';
+      moonIcon.style.display = 'none';
+    } else {
+      sunIcon.style.display = 'none';
+      moonIcon.style.display = 'block';
+    }
+  }
+
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+  // =========================================
+  //  TIME-OF-DAY GREETING
+  // =========================================
+  function updateGreeting() {
+    const hour = new Date().getHours();
+    let greeting, icon;
+    if (hour >= 5 && hour < 12) {
+      greeting = 'Good morning'; icon = '☀️';
+    } else if (hour >= 12 && hour < 17) {
+      greeting = 'Good afternoon'; icon = '☀️';
+    } else if (hour >= 17 && hour < 21) {
+      greeting = 'Good evening'; icon = '🌅';
+    } else {
+      greeting = 'Good night'; icon = '🌙';
+    }
+    document.getElementById('greeting').textContent = greeting + ' — time to reflect ' + icon;
+  }
+
+  // =========================================
+  //  DATA LAYER (localStorage)
+  // =========================================
+  const STORAGE_KEY = 'grateful_journal';
+  const COMMUNITY_KEY = 'grateful_community';
+
+  function loadData() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        data.entries = (data.entries || []).map(e => ({
+          ...e,
+          shared: e.shared !== undefined ? e.shared : true
+        }));
+        if (!data.displayName) data.displayName = '';
+        return data;
+      }
+    } catch (e) { console.warn('Failed to load data', e); }
+    return { entries: [], bestStreak: 0, displayName: '' };
+  }
+
+  function saveData(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function loadCommunity() {
+    try {
+      const raw = localStorage.getItem(COMMUNITY_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { console.warn('Failed to load community', e); }
+    return { members: {} };
+  }
+
+  function saveCommunity(data) {
+    localStorage.setItem(COMMUNITY_KEY, JSON.stringify(data));
+  }
+
+  // =========================================
+  //  HELPERS
+  // =========================================
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function formatDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  function formatDateShort(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // =========================================
+  //  STREAK CALCULATION
+  // =========================================
+  function calcStreak(entries) {
+    if (!entries.length) return { current: 0, best: 0 };
+    const dates = [...new Set(entries.map(e => e.date))].sort().reverse();
+    const today = todayStr();
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+    let current = 0;
+    if (dates[0] === today || dates[0] === yesterday) {
+      current = 1;
+      for (let i = 1; i < dates.length; i++) {
+        const prev = new Date(dates[i - 1] + 'T00:00:00');
+        const curr = new Date(dates[i] + 'T00:00:00');
+        const diff = (prev - curr) / 86400000;
+        if (diff === 1) current++;
+        else break;
+      }
+    }
+
+    let best = 1, run = 1;
+    for (let i = 1; i < dates.length; i++) {
+      const prev = new Date(dates[i - 1] + 'T00:00:00');
+      const curr = new Date(dates[i] + 'T00:00:00');
+      if ((prev - curr) / 86400000 === 1) { run++; best = Math.max(best, run); }
+      else run = 1;
+    }
+    return { current, best };
+  }
+
+  // =========================================
+  //  PROMPTS
+  // =========================================
+  const prompts = [
+    "What made you smile today?",
+    "Who is someone that positively impacted your life recently?",
+    "What is a simple pleasure you enjoyed today?",
+    "What skill or ability are you thankful for?",
+    "What is something in nature that you appreciate?",
+    "What is a challenge that helped you grow?",
+    "Who made your day easier today?",
+    "What is a memory that always makes you happy?",
+    "What technology are you grateful for?",
+    "What is something about your health you appreciate?",
+    "What opportunity are you thankful for?",
+    "What is a book, song, or movie that enriched your life?",
+    "What act of kindness did you witness or receive?",
+    "What is something you often take for granted?",
+    "What about today's weather are you grateful for?",
+    "Who is a mentor or teacher you appreciate?",
+    "What is a comfort in your home you're thankful for?",
+    "What is something new you learned recently?",
+    "What tradition or ritual brings you joy?",
+    "What is a quality in yourself that you value?",
+    "What food or meal are you grateful for today?",
+    "What is a place that brings you peace?",
+    "Who makes you feel loved and supported?",
+    "What is something beautiful you noticed today?",
+    "What freedom or right are you thankful for?",
+    "What experience shaped who you are today?",
+    "What is a small win you had recently?",
+    "What is something about your community you appreciate?",
+    "What sensory experience brought you joy (sound, smell, sight)?",
+    "What are you looking forward to?"
+  ];
+
+  function generatePrompt() {
+    const chip = document.getElementById('promptChip');
+    const prompt = prompts[Math.floor(Math.random() * prompts.length)];
+    chip.innerHTML = '&#10024; ' + prompt;
+    document.getElementById('entryInput').setAttribute('placeholder', prompt);
+  }
+
+  // =========================================
+  //  QUOTES
+  // =========================================
+  const quotes = [
+    { text: "Gratitude turns what we have into enough.", author: "Melody Beattie" },
+    { text: "The soul that gives thanks can find comfort in everything.", author: "Hannah Whitall Smith" },
+    { text: "Gratitude is not only the greatest of virtues, but the parent of all others.", author: "Marcus Tullius Cicero" },
+    { text: "When you arise in the morning, think of what a precious privilege it is to be alive.", author: "Marcus Aurelius" },
+    { text: "Enjoy the little things, for one day you may look back and realize they were the big things.", author: "Robert Brault" },
+    { text: "Gratitude makes sense of our past, brings peace for today, and creates a vision for tomorrow.", author: "Melody Beattie" },
+    { text: "The more grateful I am, the more beauty I see.", author: "Mary Davis" },
+    { text: "Gratitude is the fairest blossom which springs from the soul.", author: "Henry Ward Beecher" },
+    { text: "Let gratitude be the pillow upon which you kneel to say your nightly prayer.", author: "Maya Angelou" },
+    { text: "Give thanks in all circumstances; for this is the will of God in Christ Jesus for you.", author: "1 Thessalonians 5:18" },
+    { text: "Every good and perfect gift is from above, coming down from the Father of the heavenly lights.", author: "James 1:17" },
+    { text: "Enter his gates with thanksgiving, and his courts with praise! Give thanks to him; bless his name!", author: "Psalm 100:4" },
+    { text: "Oh give thanks to the Lord, for he is good, for his steadfast love endures forever!", author: "Psalm 107:1" },
+    { text: "I will give thanks to the Lord with my whole heart; I will recount all of your wonderful deeds.", author: "Psalm 9:1" },
+    { text: "And let the peace of Christ rule in your hearts, to which indeed you were called in one body. And be thankful.", author: "Colossians 3:15" },
+    { text: "Do not be anxious about anything, but in everything by prayer and supplication with thanksgiving let your requests be made known to God.", author: "Philippians 4:6" },
+    { text: "The Lord is my strength and my shield; in him my heart trusts, and I am helped; my heart exults, and with my song I give thanks to him.", author: "Psalm 28:7" },
+    { text: "Rejoice always, pray without ceasing, give thanks in all circumstances.", author: "1 Thessalonians 5:16-18" },
+    { text: "For everything created by God is good, and nothing is to be rejected if it is received with thanksgiving.", author: "1 Timothy 4:4" }
+  ];
+
+  let currentQuoteIndex = -1;
+
+  function nextQuote() {
+    let idx;
+    do { idx = Math.floor(Math.random() * quotes.length); } while (idx === currentQuoteIndex && quotes.length > 1);
+    currentQuoteIndex = idx;
+    const q = quotes[idx];
+    const textEl = document.getElementById('quoteText');
+    const authorEl = document.getElementById('quoteAuthor');
+    textEl.classList.add('quote-fade');
+    authorEl.classList.add('quote-fade');
+    setTimeout(() => {
+      textEl.textContent = q.text;
+      authorEl.textContent = '— ' + q.author;
+      textEl.classList.remove('quote-fade');
+      authorEl.classList.remove('quote-fade');
+    }, 400);
+  }
+
+  setInterval(nextQuote, 15000);
+
+  // =========================================
+  //  TAB SWITCHING
+  // =========================================
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    if (tab === 'journal') {
+      document.getElementById('tabJournal').classList.add('active');
+      document.getElementById('journalTab').classList.add('active');
+    } else {
+      document.getElementById('tabCommunity').classList.add('active');
+      document.getElementById('communityTab').classList.add('active');
+      renderCommunity();
+    }
+  }
+
+  // =========================================
+  //  SHARE DROPDOWN
+  // =========================================
+  let currentShareSelection = 'all';
+
+  function toggleShareDropdown() {
+    document.getElementById('shareDropdown').classList.toggle('open');
+  }
+
+  function selectShareOption(value) {
+    currentShareSelection = value;
+    document.querySelectorAll('#shareDropdownOptions .share-option').forEach(opt => {
+      opt.classList.toggle('selected', opt.dataset.value === value);
+    });
+    const labels = { private: 'Private', all: 'All Communities' };
+    document.getElementById('shareDropdownValue').textContent = labels[value] || value;
+    document.getElementById('shareDropdown').classList.remove('open');
+  }
+
+  function getShareSelection() {
+    return currentShareSelection;
+  }
+
+  function getShareBadge(entry) {
+    if (entry.sharedWith) {
+      if (entry.sharedWith === 'private') return '<span class="history-private-badge">\u{1F512} Private</span>';
+      if (entry.sharedWith === 'all') return '<span class="history-shared-badge">\u{1F310} All Communities</span>';
+      return '<span class="history-shared-badge">\u{1F310} ' + escapeHtml(entry.sharedWith) + '</span>';
+    }
+    return entry.shared
+      ? '<span class="history-shared-badge">\u{1F310} Shared</span>'
+      : '<span class="history-private-badge">\u{1F512} Private</span>';
+  }
+
+  document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('shareDropdown');
+    if (dropdown && !dropdown.contains(e.target)) {
+      dropdown.classList.remove('open');
+    }
+  });
+
+  // =========================================
+  //  SAVE ENTRY
+  // =========================================
+  function saveEntry() {
+    const input = document.getElementById('entryInput');
+    const text = input.value.trim();
+    if (!text) {
+      showToast('Write something you\'re grateful for first');
+      input.focus();
+      return;
+    }
+
+    const sharedWith = getShareSelection();
+    const shared = sharedWith !== 'private';
+    const data = loadData();
+    const entry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      date: todayStr(),
+      text: text,
+      shared: shared,
+      sharedWith: sharedWith,
+      createdAt: new Date().toISOString()
+    };
+    data.entries.push(entry);
+
+    const streak = calcStreak(data.entries);
+    data.bestStreak = Math.max(data.bestStreak || 0, streak.best);
+    saveData(data);
+    input.value = '';
+
+    const card = document.getElementById('entryCard');
+    card.classList.add('save-anim');
+    setTimeout(() => card.classList.remove('save-anim'), 600);
+
+    const toastMsg = sharedWith === 'private' ? 'Saved privately ✓'
+      : sharedWith === 'all' ? 'Saved & shared with all communities ✓'
+      : 'Saved & shared with ' + sharedWith + ' ✓';
+    showToast(toastMsg);
+    renderAll();
+  }
+
+  // =========================================
+  //  DELETE ENTRY
+  // =========================================
+  function deleteEntry(id) {
+    const data = loadData();
+    data.entries = data.entries.filter(e => e.id !== id);
+    saveData(data);
+    showToast('Entry removed');
+    renderAll();
+  }
+
+  function showEntryForm() {
+    document.getElementById('entryForm').style.display = 'block';
+    document.getElementById('addMoreWrap').style.display = 'none';
+    document.getElementById('entryInput').focus();
+  }
+
+  // =========================================
+  //  HISTORY
+  // =========================================
+  let historyExpanded = false;
+
+  function toggleHistory() {
+    historyExpanded = !historyExpanded;
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const data = loadData();
+    const entries = [...data.entries].reverse();
+    const list = document.getElementById('historyList');
+    const toggle = document.getElementById('historyToggle');
+
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="history-empty">Your journey begins with your first entry.</div>';
+      toggle.style.display = 'none';
+      return;
+    }
+
+    const show = historyExpanded ? entries : entries.slice(0, 5);
+    list.innerHTML = show.map(e => `
+      <div class="history-item">
+        <div class="history-dot"></div>
+        <div style="flex:1; min-width:0;">
+          <div class="history-text">${escapeHtml(e.text)}</div>
+          <div class="history-meta">
+            <span class="history-date">${formatDateShort(e.date)}</span>
+            ${getShareBadge(e)}
+          </div>
+        </div>
+        <button class="history-delete" onclick="deleteEntry('${e.id}')" title="Remove entry">&#10005;</button>
+      </div>
+    `).join('');
+
+    if (entries.length > 5) {
+      toggle.style.display = 'block';
+      toggle.querySelector('button').textContent = historyExpanded
+        ? 'Show less' : 'Show all ' + entries.length + ' entries';
+    } else {
+      toggle.style.display = 'none';
+    }
+  }
+
+  // =========================================
+  //  STATS
+  // =========================================
+  function renderStats() {
+    const data = loadData();
+    const entries = data.entries;
+    const today = todayStr();
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const monthStart = today.slice(0, 7);
+
+    document.getElementById('totalEntries').textContent = entries.length;
+    document.getElementById('thisWeek').textContent = entries.filter(e => e.date >= weekAgo).length;
+    document.getElementById('thisMonth').textContent = entries.filter(e => e.date.startsWith(monthStart)).length;
+  }
+
+  // =========================================
+  //  RANDOM RECALL
+  // =========================================
+  function showRandomRecall() {
+    const data = loadData();
+    if (data.entries.length === 0) return;
+    const entry = data.entries[Math.floor(Math.random() * data.entries.length)];
+    const content = document.getElementById('recallContent');
+    content.innerHTML = '<div class="recall-text">' + escapeHtml(entry.text) + '</div><div class="recall-date">' + formatDate(entry.date) + '</div>';
+    document.getElementById('recallFooter').style.display = 'flex';
+  }
+
+  // =========================================
+  //  COMMUNITY: DISPLAY NAME
+  // =========================================
+  function saveDisplayName() {
+    const data = loadData();
+    data.displayName = document.getElementById('displayName').value.trim();
+    saveData(data);
+    updateAvatar();
+  }
+
+  function updateAvatar() {
+    const data = loadData();
+    const name = data.displayName || '';
+    const avatar = document.getElementById('profileAvatar');
+    avatar.textContent = name ? name.charAt(0).toUpperCase() : '?';
+  }
+
+  // =========================================
+  //  COMMUNITY: EXPORT
+  // =========================================
+  function exportSharedEntries() {
+    const data = loadData();
+    const name = data.displayName || '';
+    if (!name) {
+      showToast('Enter your name first so others know who you are');
+      return;
+    }
+
+    const shared = data.entries.filter(e => e.sharedWith ? e.sharedWith !== 'private' : e.shared);
+    if (shared.length === 0) {
+      showToast('No shared entries to export yet');
+      return;
+    }
+
+    const exportData = {
+      type: 'grateful_community_export',
+      version: 1,
+      author: name,
+      exportedAt: new Date().toISOString(),
+      entries: shared.map(e => ({
+        date: e.date,
+        text: e.text,
+        createdAt: e.createdAt
+      }))
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'grateful-' + name.toLowerCase().replace(/\s+/g, '-') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Entries exported! Share the file with friends.');
+  }
+
+  // =========================================
+  //  COMMUNITY: IMPORT
+  // =========================================
+  function importEntries(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if (imported.type !== 'grateful_community_export') {
+          showToast('Invalid file format');
+          return;
+        }
+
+        const community = loadCommunity();
+        const author = imported.author || 'Unknown';
+        const colors = ['#7BAE7F', '#D4917B', '#7BA3AE', '#C8A951', '#A77BB5', '#E8A87C'];
+        if (!community.members[author]) {
+          community.members[author] = {
+            color: colors[Object.keys(community.members).length % colors.length],
+            entries: []
+          };
+        }
+        community.members[author].entries = imported.entries;
+        saveCommunity(community);
+        showToast('Imported ' + imported.entries.length + ' entries from ' + author);
+        renderCommunity();
+      } catch (err) {
+        showToast('Failed to import: invalid file');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  // =========================================
+  //  COMMUNITY: RENDER
+  // =========================================
+  function renderCommunity() {
+    const data = loadData();
+    const community = loadCommunity();
+
+    document.getElementById('displayName').value = data.displayName || '';
+    updateAvatar();
+    const sharedCount = data.entries.filter(e => e.sharedWith ? e.sharedWith !== 'private' : e.shared).length;
+    document.getElementById('sharedCount').textContent = sharedCount + ' entr' + (sharedCount === 1 ? 'y' : 'ies') + ' shared';
+
+    // Members
+    const membersList = document.getElementById('membersList');
+    const memberNames = Object.keys(community.members);
+    if (memberNames.length === 0) {
+      membersList.innerHTML = '<div class="community-empty">Import a friend\'s entries to see them here.</div>';
+    } else {
+      membersList.innerHTML = memberNames.map(name => {
+        const m = community.members[name];
+        return '<div class="member-pill" style="border-left: 3px solid ' + m.color + ';">' +
+          '<span class="member-name">' + escapeHtml(name) + '</span>' +
+          '<span class="member-count">' + m.entries.length + ' entries</span>' +
+          '<button class="member-remove" onclick="removeMember(\'' + escapeHtml(name).replace(/'/g, "\\'") + '\')" title="Remove">&times;</button>' +
+          '</div>';
+      }).join('');
+    }
+
+    // Feed
+    const feed = document.getElementById('communityFeed');
+    let allFeedEntries = [];
+
+    for (const [name, member] of Object.entries(community.members)) {
+      for (const entry of member.entries) {
+        allFeedEntries.push({
+          author: name,
+          color: member.color,
+          date: entry.date,
+          text: entry.text,
+          createdAt: entry.createdAt
+        });
+      }
+    }
+
+    const myName = data.displayName || 'You';
+    const myShared = data.entries.filter(e => e.sharedWith ? e.sharedWith !== 'private' : e.shared);
+    for (const entry of myShared) {
+      allFeedEntries.push({
+        author: myName,
+        color: '#C8A951',
+        date: entry.date,
+        text: entry.text,
+        createdAt: entry.createdAt,
+        isOwn: true
+      });
+    }
+
+    allFeedEntries.sort((a, b) => (b.createdAt || b.date).localeCompare(a.createdAt || a.date));
+
+    if (allFeedEntries.length === 0) {
+      feed.innerHTML = '<div class="community-empty">Share entries and import friends to see the feed.</div>';
+    } else {
+      feed.innerHTML = allFeedEntries.slice(0, 50).map(e =>
+        '<div class="feed-entry">' +
+          '<div class="feed-header">' +
+            '<div class="feed-avatar" style="background:' + e.color + ';">' + e.author.charAt(0).toUpperCase() + '</div>' +
+            '<div class="feed-meta">' +
+              '<span class="feed-author">' + escapeHtml(e.author) + (e.isOwn ? ' (you)' : '') + '</span>' +
+              '<span class="feed-date">' + formatDateShort(e.date) + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="feed-text">' + escapeHtml(e.text) + '</div>' +
+        '</div>'
+      ).join('');
+    }
+  }
+
+  function removeMember(name) {
+    const community = loadCommunity();
+    delete community.members[name];
+    saveCommunity(community);
+    showToast(name + ' removed from community');
+    renderCommunity();
+  }
+
+  // =========================================
+  //  KEYBOARD SHORTCUTS
+  // =========================================
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      const input = document.getElementById('entryInput');
+      if (document.activeElement === input && input.value.trim()) saveEntry();
+    }
+  });
+
+  // =========================================
+  //  RENDER ALL
+  // =========================================
+  function renderAll() {
+    const data = loadData();
+    const entries = data.entries;
+    const today = todayStr();
+
+    document.getElementById('entryDate').textContent = formatDate(today);
+
+    // Streak
+    const streak = calcStreak(entries);
+    const best = Math.max(streak.best, data.bestStreak || 0);
+    document.getElementById('streakCount').textContent = streak.current;
+    document.getElementById('bestStreak').textContent = best;
+
+    const flame = document.getElementById('streakFlame');
+    if (streak.current > 0) {
+      flame.classList.add('active');
+      flame.innerHTML = '&#128293;';
+      flame.style.opacity = '1';
+      flame.style.filter = 'none';
+    } else {
+      flame.classList.remove('active');
+      flame.innerHTML = '&#128293;';
+      flame.style.opacity = '0.3';
+      flame.style.filter = 'grayscale(1)';
+    }
+
+    // Today's entry
+    const todayEntries = entries.filter(e => e.date === today);
+    const todayDone = document.getElementById('todayDone');
+    const entryForm = document.getElementById('entryForm');
+    const addMore = document.getElementById('addMoreWrap');
+
+    if (todayEntries.length > 0) {
+      todayDone.style.display = 'flex';
+      const latest = todayEntries[todayEntries.length - 1];
+      document.getElementById('todayEntryPreview').textContent =
+        latest.text.length > 80 ? latest.text.slice(0, 80) + '…' : latest.text;
+      entryForm.style.display = 'none';
+      addMore.style.display = 'block';
+    } else {
+      todayDone.style.display = 'none';
+      entryForm.style.display = 'block';
+      addMore.style.display = 'none';
+    }
+
+    if (entries.length > 0) showRandomRecall();
+    renderStats();
+    renderHistory();
+
+    // Update community badge count
+    const community = loadCommunity();
+    const memberCount = Object.keys(community.members).length;
+    const badge = document.getElementById('communityBadge');
+    if (memberCount > 0) {
+      badge.textContent = memberCount;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  // =========================================
+  //  INIT
+  // =========================================
+  initTheme();
+  updateGreeting();
+  renderAll();
+  nextQuote();
+</script>
+</body>
+</html>
