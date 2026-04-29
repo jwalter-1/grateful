@@ -1009,6 +1009,23 @@
     margin: 8px 0;
   }
 
+  .invite-link-box {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 10px 14px;
+    background: var(--input-bg);
+    border: var(--input-border);
+    border-radius: var(--radius-sm);
+    margin: 4px 0 12px;
+    word-break: break-all;
+    cursor: pointer;
+    transition: border-color var(--transition);
+  }
+  .invite-link-box:hover {
+    border-color: var(--gold);
+  }
+
   /* Community feed */
   .feed-list { display: flex; flex-direction: column; gap: 16px; }
   .feed-item {
@@ -1786,11 +1803,13 @@
   <!-- Invite Code Display Modal -->
   <div class="modal-overlay" id="inviteCodeModal">
     <div class="modal" style="text-align: center;">
-      <div class="modal-title">Your Invite Code</div>
+      <div class="modal-title">Invite People</div>
       <div class="invite-code-display" id="inviteCodeDisplay">------</div>
-      <p style="font-size: 13px; color: var(--text-secondary); margin: 12px 0;">Share this code with people you want to invite.</p>
-      <div class="modal-actions" style="justify-content: center;">
-        <button class="btn btn-primary" onclick="copyInviteCode()">Copy Code</button>
+      <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0 4px;">Share this link — they'll join automatically:</p>
+      <div class="invite-link-box" id="inviteLinkBox" onclick="copyInviteLink()"></div>
+      <div class="modal-actions" style="justify-content: center; gap: 8px;">
+        <button class="btn btn-primary" onclick="copyInviteLink()">Copy Link</button>
+        <button class="btn btn-secondary" onclick="copyInviteCode()">Copy Code Only</button>
         <button class="btn btn-secondary" onclick="closeModal('inviteCodeModal')">Done</button>
       </div>
     </div>
@@ -1815,6 +1834,54 @@
   let bestStreakCache = 0;
 
   // =========================================
+  //  INVITE LINK HANDLING
+  // =========================================
+  function getPendingInviteCode() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('join') || null;
+  }
+
+  async function handlePendingInvite() {
+    const code = getPendingInviteCode();
+    if (!code || !currentUser) return;
+    try {
+      const communities = await pgGet('communities', 'select=id,name,invite_policy&invite_code=eq.' + code.toUpperCase());
+      if (!communities.length) { showToast('Community not found — invite code may be invalid'); cleanInviteUrl(); return; }
+      const community = communities[0];
+      const existing = await pgGet('community_members',
+        'select=id&community_id=eq.' + community.id + '&user_id=eq.' + currentUser.id);
+      if (existing.length) {
+        showToast("You're already in " + community.name);
+        switchTab('community');
+        cleanInviteUrl();
+        return;
+      }
+      if (community.invite_policy === 'restricted') {
+        showToast('This community requires an invitation from the creator');
+        cleanInviteUrl();
+        return;
+      }
+      await pgPost('community_members', {
+        community_id: community.id, user_id: currentUser.id, role: 'member'
+      });
+      showToast('Joined ' + community.name + '!');
+      switchTab('community');
+      await renderCommunity();
+      cleanInviteUrl();
+    } catch (err) {
+      console.error('Invite join error:', err);
+      showToast('Failed to join community');
+    }
+  }
+
+  function cleanInviteUrl() {
+    const url = new URL(window.location);
+    url.searchParams.delete('join');
+    url.searchParams.delete('v');
+    window.history.replaceState({}, '', url.pathname);
+  }
+
+  // =========================================
   //  AUTH STATE
   // =========================================
   async function checkAuthState() {
@@ -1830,6 +1897,7 @@
         updateGreeting();
         maybeShowNamePrompt();
         nextQuote();
+        await handlePendingInvite();
       } else {
         document.getElementById('loginScreen').classList.remove('hidden');
         initTheme();
@@ -1849,6 +1917,7 @@
       updateGreeting();
       maybeShowNamePrompt();
       await renderAll();
+      await handlePendingInvite();
     } else {
       currentUser = null;
       console.log('[auth] User signed out');
@@ -2701,14 +2770,26 @@
     }
   }
 
+  function getInviteLink(code) {
+    const base = window.location.origin + window.location.pathname;
+    return base + '?join=' + code;
+  }
+
   function showInviteCode(code) {
     document.getElementById('inviteCodeDisplay').textContent = code;
+    document.getElementById('inviteLinkBox').textContent = getInviteLink(code);
     document.getElementById('inviteCodeModal').classList.add('show');
   }
 
   function copyInviteCode() {
     const code = document.getElementById('inviteCodeDisplay').textContent;
     navigator.clipboard.writeText(code).then(() => showToast('Code copied!')).catch(() => showToast('Code: ' + code));
+  }
+
+  function copyInviteLink() {
+    const code = document.getElementById('inviteCodeDisplay').textContent;
+    const link = getInviteLink(code);
+    navigator.clipboard.writeText(link).then(() => showToast('Invite link copied!')).catch(() => showToast(link));
   }
 
   async function leaveCommunity(communityId, communityName) {
