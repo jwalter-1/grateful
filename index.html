@@ -1934,23 +1934,13 @@
   async function loadUserProfile() {
     if (!currentUser) return;
     try {
-      const { data, error } = await sb
-        .from('profiles')
-        .select('display_name')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (data) {
-        document.getElementById('displayName').value = data.display_name || '';
+      const rows = await pgGet('profiles', 'select=display_name&id=eq.' + currentUser.id);
+      if (rows.length > 0) {
+        document.getElementById('displayName').value = rows[0].display_name || '';
         updateAvatar();
-      } else if (error) {
-        // Profile doesn't exist yet, create it
+      } else {
         console.log('Creating profile for user:', currentUser.id);
-        const { error: insertErr } = await sb.from('profiles').upsert({
-          id: currentUser.id,
-          display_name: ''
-        }, { onConflict: 'id' });
-        if (insertErr) console.error('Profile creation error:', insertErr);
+        await pgUpsert('profiles', { id: currentUser.id, display_name: '' }, 'id');
       }
     } catch (err) {
       console.error('Load profile error:', err);
@@ -2016,21 +2006,85 @@
   }
 
   // =========================================
-  //  DATA LAYER (Supabase)
+  //  POSTGREST FETCH WRAPPER
+  //  (bypasses sb.from() which hangs due to
+  //   navigator.locks deadlock in supabase-js)
+  // =========================================
+  function getAuthToken() {
+    try {
+      const session = JSON.parse(localStorage.getItem('sb-cijacjduhstkmwibddio-auth-token') || '{}');
+      return session?.access_token || null;
+    } catch { return null; }
+  }
+
+  function pgHeaders(preferHeader) {
+    const h = {
+      'apikey': SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json'
+    };
+    const token = getAuthToken();
+    if (token) h['Authorization'] = 'Bearer ' + token;
+    if (preferHeader) h['Prefer'] = preferHeader;
+    return h;
+  }
+
+  const REST = SUPABASE_URL + '/rest/v1';
+
+  async function pgGet(table, query) {
+    const url = REST + '/' + table + '?' + query;
+    const res = await fetch(url, { headers: pgHeaders() });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function pgPost(table, body) {
+    const res = await fetch(REST + '/' + table, {
+      method: 'POST',
+      headers: pgHeaders('return=representation'),
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function pgPatch(table, query, body) {
+    const res = await fetch(REST + '/' + table + '?' + query, {
+      method: 'PATCH',
+      headers: pgHeaders('return=representation'),
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function pgDelete(table, query) {
+    const res = await fetch(REST + '/' + table + '?' + query, {
+      method: 'DELETE',
+      headers: pgHeaders()
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return true;
+  }
+
+  async function pgUpsert(table, body, onConflict) {
+    const h = pgHeaders('return=representation,resolution=merge-duplicates');
+    const url = REST + '/' + table + (onConflict ? '?on_conflict=' + onConflict : '');
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: h,
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  // =========================================
+  //  DATA LAYER (using direct PostgREST fetch)
   // =========================================
   async function loadEntries() {
-    if (!currentUser) { console.log('[loadEntries] No currentUser, returning []'); return []; }
-    console.log('[loadEntries] Fetching entries for user:', currentUser.id);
+    if (!currentUser) return [];
     try {
-      const { data, error } = await sb
-        .from('entries')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('date', { ascending: false });
-
-      console.log('[loadEntries] Result:', { count: data?.length, error, data });
-      if (error) throw error;
-      return data || [];
+      return await pgGet('entries', 'select=*&user_id=eq.' + currentUser.id + '&order=date.desc');
     } catch (err) {
       console.error('[loadEntries] Error:', err);
       return [];
@@ -2040,20 +2094,14 @@
   async function insertEntry(text, sharedWith) {
     if (!currentUser) return null;
     try {
-      const { data, error } = await sb
-        .from('entries')
-        .insert({
-          user_id: currentUser.id,
-          text: text,
-          date: todayStr(),
-          shared_with: sharedWith,
-          is_anonymous: false
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const rows = await pgPost('entries', {
+        user_id: currentUser.id,
+        text: text,
+        date: todayStr(),
+        shared_with: sharedWith,
+        is_anonymous: false
+      });
+      return rows[0] || null;
     } catch (err) {
       console.error('Insert entry error:', err);
       return null;
@@ -2063,14 +2111,7 @@
   async function deleteEntryFromDB(id) {
     if (!currentUser) return false;
     try {
-      const { error } = await sb
-        .from('entries')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', currentUser.id);
-
-      if (error) throw error;
-      return true;
+      return await pgDelete('entries', 'id=eq.' + id + '&user_id=eq.' + currentUser.id);
     } catch (err) {
       console.error('Delete entry error:', err);
       return false;
@@ -2080,12 +2121,10 @@
   async function updateProfile(displayName) {
     if (!currentUser) return false;
     try {
-      const { error } = await sb
-        .from('profiles')
-        .update({ display_name: displayName, updated_at: new Date().toISOString() })
-        .eq('id', currentUser.id);
-
-      if (error) throw error;
+      await pgPatch('profiles', 'id=eq.' + currentUser.id, {
+        display_name: displayName,
+        updated_at: new Date().toISOString()
+      });
       return true;
     } catch (err) {
       console.error('Update profile error:', err);
@@ -2453,11 +2492,8 @@
   async function loadMyCommunities() {
     if (!currentUser) return [];
     try {
-      const { data, error } = await sb
-        .from('community_members')
-        .select('community_id, role, communities(id, name, invite_code, invite_policy, created_by)')
-        .eq('user_id', currentUser.id);
-      if (error) throw error;
+      const data = await pgGet('community_members',
+        'select=community_id,role,communities(id,name,invite_code,invite_policy,created_by)&user_id=eq.' + currentUser.id);
       return (data || []).map(m => ({ ...m.communities, myRole: m.role }));
     } catch (err) {
       console.error('Load communities error:', err);
@@ -2467,11 +2503,8 @@
 
   async function loadCommunityMembers(communityId) {
     try {
-      const { data, error } = await sb
-        .from('community_members')
-        .select('user_id, role, profiles(display_name)')
-        .eq('community_id', communityId);
-      if (error) throw error;
+      const data = await pgGet('community_members',
+        'select=user_id,role,profiles(display_name)&community_id=eq.' + communityId);
       return (data || []).map(m => ({
         userId: m.user_id,
         role: m.role,
@@ -2490,20 +2523,12 @@
       const communityIds = communities.map(c => c.id);
       if (communityIds.length === 0) return [];
       const feedItems = [];
-      const { data: allEntries } = await sb
-        .from('entries')
-        .select('id, text, date, created_at, is_anonymous, user_id, shared_with, profiles(display_name)')
-        .eq('shared_with', 'all')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const allEntries = await pgGet('entries',
+        'select=id,text,date,created_at,is_anonymous,user_id,shared_with,profiles(display_name)&shared_with=eq.all&order=created_at.desc&limit=50');
       if (allEntries) feedItems.push(...allEntries);
       for (const cid of communityIds) {
-        const { data: cEntries } = await sb
-          .from('entries')
-          .select('id, text, date, created_at, is_anonymous, user_id, shared_with, profiles(display_name)')
-          .eq('shared_with', cid)
-          .order('created_at', { ascending: false })
-          .limit(30);
+        const cEntries = await pgGet('entries',
+          'select=id,text,date,created_at,is_anonymous,user_id,shared_with,profiles(display_name)&shared_with=eq.' + cid + '&order=created_at.desc&limit=30');
         if (cEntries) feedItems.push(...cEntries);
       }
       const seen = new Set();
@@ -2522,402 +2547,4 @@
   }
 
   function showJoinCommunityModal() {
-    document.getElementById('joinInviteCode').value = '';
-    document.getElementById('joinCommunityModal').classList.add('show');
-  }
-
-  function closeModal(id) {
-    document.getElementById(id).classList.remove('show');
-  }
-
-  async function createCommunity() {
-    const name = document.getElementById('newCommunityName').value.trim();
-    if (!name) { showToast('Enter a community name'); return; }
-    const policy = document.querySelector('input[name="invitePolicy"]:checked').value;
-    try {
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const { data, error } = await sb.from('communities').insert({
-        name: name, created_by: currentUser.id, invite_code: code, invite_policy: policy
-      }).select().single();
-      if (error) throw error;
-      await sb.from('community_members').insert({
-        community_id: data.id, user_id: currentUser.id, role: 'creator'
-      });
-      closeModal('createCommunityModal');
-      showToast('Community created!');
-      document.getElementById('inviteCodeDisplay').textContent = code;
-      document.getElementById('inviteCodeModal').classList.add('show');
-      await renderCommunity();
-    } catch (err) {
-      console.error('Create community error:', err);
-      showToast('Failed to create community');
-    }
-  }
-
-  async function joinCommunity() {
-    const code = document.getElementById('joinInviteCode').value.trim().toUpperCase();
-    if (!code || code.length < 4) { showToast('Enter a valid invite code'); return; }
-    try {
-      const { data: community, error: lookupErr } = await sb
-        .from('communities').select('id, name, invite_policy').eq('invite_code', code).single();
-      if (lookupErr || !community) { showToast('Community not found — check the code'); return; }
-      const { data: existing } = await sb.from('community_members')
-        .select('id').eq('community_id', community.id).eq('user_id', currentUser.id).single();
-      if (existing) { showToast("You're already in " + community.name); closeModal('joinCommunityModal'); return; }
-      if (community.invite_policy === 'restricted') { showToast('This community requires an invitation from the creator'); return; }
-      const { error: joinErr } = await sb.from('community_members').insert({
-        community_id: community.id, user_id: currentUser.id, role: 'member'
-      });
-      if (joinErr) throw joinErr;
-      closeModal('joinCommunityModal');
-      showToast('Joined ' + community.name + '!');
-      await renderCommunity();
-    } catch (err) {
-      console.error('Join community error:', err);
-      showToast('Failed to join community');
-    }
-  }
-
-  function showInviteCode(code) {
-    document.getElementById('inviteCodeDisplay').textContent = code;
-    document.getElementById('inviteCodeModal').classList.add('show');
-  }
-
-  function copyInviteCode() {
-    const code = document.getElementById('inviteCodeDisplay').textContent;
-    navigator.clipboard.writeText(code).then(() => showToast('Code copied!')).catch(() => showToast('Code: ' + code));
-  }
-
-  async function leaveCommunity(communityId, communityName) {
-    if (!confirm('Leave ' + communityName + '?')) return;
-    try {
-      const { error } = await sb.from('community_members').delete()
-        .eq('community_id', communityId).eq('user_id', currentUser.id);
-      if (error) throw error;
-      showToast('Left ' + communityName);
-      await renderCommunity();
-    } catch (err) {
-      console.error('Leave community error:', err);
-      showToast('Failed to leave community');
-    }
-  }
-
-  // Stub: keep old function name to avoid errors
-  async function exportSharedEntries() {
-    const entries = await loadEntries();
-    const name = document.getElementById('displayName').value.trim() || '';
-
-    if (!name) {
-      showToast('Enter your name first so others know who you are');
-      return;
-    }
-
-    const shared = entries.filter(e => e.shared_with && e.shared_with !== 'private');
-    if (shared.length === 0) {
-      showToast('No shared entries to export yet');
-      return;
-    }
-
-    const exportData = {
-      type: 'grateful_community_export',
-      version: 1,
-      author: name,
-      exportedAt: new Date().toISOString(),
-      entries: shared.map(e => ({
-        date: e.date,
-        text: e.text,
-        createdAt: e.created_at
-      }))
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'grateful-' + name.toLowerCase().replace(/\s+/g, '-') + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Entries exported! Share the file with friends.');
-  }
-
-  // =========================================
-  //  COMMUNITY: RENDER (Supabase)
-  // =========================================
-  async function renderCommunity() {
-    const entries = await loadEntries();
-    updateAvatar();
-    const sharedCount = entries.filter(e => e.shared_with && e.shared_with !== 'private').length;
-    document.getElementById('sharedCount').textContent = sharedCount + ' entr' + (sharedCount === 1 ? 'y' : 'ies') + ' shared';
-
-    const communities = await loadMyCommunities();
-    const list = document.getElementById('communitiesList');
-    if (communities.length === 0) {
-      list.innerHTML = '<div class="community-empty">You haven\'t joined any communities yet.</div>';
-    } else {
-      let html = '';
-      for (const c of communities) {
-        const members = await loadCommunityMembers(c.id);
-        const isCreator = c.myRole === 'creator';
-        html += '<div class="community-item">' +
-          '<div class="community-item-icon">' + c.name.charAt(0).toUpperCase() + '</div>' +
-          '<div class="community-item-info">' +
-            '<div class="community-item-name">' + escapeHtml(c.name) + '</div>' +
-            '<div class="community-item-meta">' + members.length + ' member' + (members.length !== 1 ? 's' : '') +
-              (isCreator ? ' &middot; Creator' : '') + '</div>' +
-          '</div>' +
-          '<div class="community-item-actions">' +
-            (isCreator ? '<button class="community-item-btn" onclick="showInviteCode(\'' + c.invite_code + '\')" title="Invite code">&#128279;</button>' : '') +
-            '<button class="community-item-btn danger" onclick="leaveCommunity(\'' + c.id + '\', \'' + escapeHtml(c.name).replace(/'/g, "\\'") + '\')" title="Leave">' +
-              (isCreator ? '&#128465;' : '&#10005;') + '</button>' +
-          '</div></div>';
-      }
-      list.innerHTML = html;
-    }
-
-    const feed = document.getElementById('communityFeed');
-    const feedItems = await loadCommunityFeed();
-    if (feedItems.length === 0) {
-      feed.innerHTML = '<div class="community-empty">Join or create a community to see shared entries here.</div>';
-    } else {
-      const colors = ['#7BAE7F','#D4917B','#7BA3AE','#C8A951','#A77BB5','#E8A87C'];
-      feed.innerHTML = feedItems.map((e, i) => {
-        const authorName = e.is_anonymous ? 'Anonymous' : (e.profiles?.display_name || 'Someone');
-        const isOwn = e.user_id === currentUser.id;
-        const displayName = isOwn ? (document.getElementById('displayName').value.trim() || 'You') : authorName;
-        const color = isOwn ? '#C8A951' : colors[i % colors.length];
-        return '<div class="feed-item"><div class="feed-item-header">' +
-          '<div class="feed-avatar" style="background:' + color + ';">' + displayName.charAt(0).toUpperCase() + '</div>' +
-          '<div class="feed-name">' + escapeHtml(displayName) + (isOwn ? ' (you)' : '') + '</div>' +
-          '<div class="feed-date">' + formatDateShort(e.date) + '</div></div>' +
-          '<div class="feed-text">' + escapeHtml(e.text) + '</div></div>';
-      }).join('');
-    }
-
-    const badge = document.getElementById('communityBadge');
-    if (communities.length > 0) { badge.textContent = communities.length; badge.style.display = 'inline-flex'; }
-    else { badge.style.display = 'none'; }
-  }
-
-  // Old stubs removed — replaced by Supabase community system above
-  function importEntries() { }
-  function loadCommunityLocal() { return { members: {} }; }
-  function saveCommunityLocal() { }
-  function removeMember() { }
-  /* REMOVED_OLD_COMMUNITY_CODE
-          return;
-        }
-
-        const community = loadCommunityLocal();
-        const author = imported.author || 'Unknown';
-        const colors = ['#7BAE7F', '#D4917B', '#7BA3AE', '#C8A951', '#A77BB5', '#E8A87C'];
-        if (!community.members[author]) {
-          community.members[author] = {
-            color: colors[Object.keys(community.members).length % colors.length],
-            entries: []
-          };
-        }
-        community.members[author].entries = imported.entries;
-        saveCommunityLocal(community);
-        showToast('Imported ' + imported.entries.length + ' entries from ' + author);
-        renderCommunity();
-      } catch (err) {
-        showToast('Failed to import: invalid file');
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  }
-
-  function loadCommunityLocal() {
-    try {
-      const raw = localStorage.getItem('grateful_community');
-      if (raw) return JSON.parse(raw);
-    } catch (e) { console.warn('Failed to load community', e); }
-    return { members: {} };
-  }
-
-  function saveCommunityLocal(data) {
-    localStorage.setItem('grateful_community', JSON.stringify(data));
-  }
-
-  // =========================================
-  //  COMMUNITY: RENDER
-  // =========================================
-  async function renderCommunity() {
-    const entries = await loadEntries();
-    const community = loadCommunityLocal();
-
-    const displayName = document.getElementById('displayName').value.trim() || '';
-    updateAvatar();
-    const sharedCount = entries.filter(e => e.shared_with && e.shared_with !== 'private').length;
-    document.getElementById('sharedCount').textContent = sharedCount + ' entr' + (sharedCount === 1 ? 'y' : 'ies') + ' shared';
-
-    // Members
-    const membersList = document.getElementById('membersList');
-    const memberNames = Object.keys(community.members);
-    if (memberNames.length === 0) {
-      membersList.innerHTML = '<div class="community-empty">Import a friend\'s entries to see them here.</div>';
-    } else {
-      membersList.innerHTML = memberNames.map(name => {
-        const m = community.members[name];
-        return '<div class="member-pill" style="border-left: 3px solid ' + m.color + ';">' +
-          '<span class="member-name">' + escapeHtml(name) + '</span>' +
-          '<span class="member-count">' + m.entries.length + ' entries</span>' +
-          '<button class="member-remove" onclick="removeMember(\'' + escapeHtml(name).replace(/'/g, "\\'") + '\')" title="Remove">&times;</button>' +
-          '</div>';
-      }).join('');
-    }
-
-    // Feed
-    const feed = document.getElementById('communityFeed');
-    let allFeedEntries = [];
-
-    for (const [name, member] of Object.entries(community.members)) {
-      for (const entry of member.entries) {
-        allFeedEntries.push({
-          author: name,
-          color: member.color,
-          date: entry.date,
-          text: entry.text,
-          createdAt: entry.createdAt
-        });
-      }
-    }
-
-    const myName = displayName || 'You';
-    const myShared = entries.filter(e => e.shared_with && e.shared_with !== 'private');
-    for (const entry of myShared) {
-      allFeedEntries.push({
-        author: myName,
-        color: '#C8A951',
-        date: entry.date,
-        text: entry.text,
-        createdAt: entry.created_at,
-        isOwn: true
-      });
-    }
-
-    allFeedEntries.sort((a, b) => (b.createdAt || b.date).localeCompare(a.createdAt || a.date));
-
-    if (allFeedEntries.length === 0) {
-      feed.innerHTML = '<div class="community-empty">Share entries and import friends to see the feed.</div>';
-    } else {
-      feed.innerHTML = allFeedEntries.slice(0, 50).map(e =>
-        '<div class="feed-item">' +
-          '<div class="feed-item-header">' +
-            '<div class="feed-avatar" style="background:' + e.color + ';">' + e.author.charAt(0).toUpperCase() + '</div>' +
-            '<div class="feed-name">' + escapeHtml(e.author) + (e.isOwn ? ' (you)' : '') + '</div>' +
-            '<div class="feed-date">' + formatDateShort(e.date) + '</div>' +
-          '</div>' +
-          '<div class="feed-text">' + escapeHtml(e.text) + '</div>' +
-        '</div>'
-      ).join('');
-    }
-  }
-
-  function removeMember(name) {
-    const community = loadCommunityLocal();
-    delete community.members[name];
-    saveCommunityLocal(community);
-    showToast(name + ' removed from community');
-  REMOVED_OLD_COMMUNITY_CODE */
-
-  // =========================================
-  //  KEYBOARD SHORTCUTS
-  // =========================================
-  document.addEventListener('keydown', function(e) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      const input = document.getElementById('entryInput');
-      if (document.activeElement === input && input.value.trim()) saveEntry();
-    }
-  });
-
-  // =========================================
-  //  RENDER ALL
-  // =========================================
-  async function renderAll() {
-    if (!currentUser) { console.log('[renderAll] No currentUser, skipping'); return; }
-    console.log('[renderAll] Starting render for user:', currentUser.id);
-
-    const entries = await loadEntries();
-    console.log('[renderAll] Got', entries.length, 'entries');
-    const today = todayStr();
-
-    document.getElementById('entryDate').textContent = formatDate(today);
-
-    // Streak
-    const streak = calcStreak(entries);
-    const best = Math.max(streak.best, bestStreakCache || 0);
-    document.getElementById('streakCount').textContent = streak.current;
-    document.getElementById('bestStreak').textContent = best;
-
-    const flame = document.getElementById('streakFlame');
-    if (streak.current > 0) {
-      flame.classList.add('active');
-      flame.innerHTML = '&#128293;';
-      flame.style.opacity = '1';
-      flame.style.filter = 'none';
-    } else {
-      flame.classList.remove('active');
-      flame.innerHTML = '&#128293;';
-      flame.style.opacity = '0.3';
-      flame.style.filter = 'grayscale(1)';
-    }
-
-    // Today's entry
-    const todayEntries = entries.filter(e => e.date === today);
-    const todayDone = document.getElementById('todayDone');
-    const entryForm = document.getElementById('entryForm');
-    const addMore = document.getElementById('addMoreWrap');
-
-    if (todayEntries.length > 0) {
-      todayDone.style.display = 'flex';
-      const latest = todayEntries[todayEntries.length - 1];
-      document.getElementById('todayEntryPreview').textContent =
-        latest.text.length > 80 ? latest.text.slice(0, 80) + '…' : latest.text;
-      entryForm.style.display = 'none';
-      addMore.style.display = 'block';
-    } else {
-      todayDone.style.display = 'none';
-      entryForm.style.display = 'block';
-      addMore.style.display = 'none';
-    }
-
-    if (entries.length > 0) await showRandomRecall();
-    await renderStats();
-    await renderHistory();
-
-    // Community badge is updated by renderCommunity()
-    await renderCommunity();
-  }
-
-  // =========================================
-  //  CLOSE DROPDOWN ON OUTSIDE CLICK
-  // =========================================
-  document.addEventListener('click', function(e) {
-    const dropdown = document.getElementById('shareDropdown');
-    if (dropdown && !dropdown.contains(e.target)) {
-      dropdown.classList.remove('open');
-    }
-  });
-
-  // =========================================
-  //  KEYBOARD SHORTCUTS
-  // =========================================
-  document.addEventListener('keydown', function(e) {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      const input = document.getElementById('entryInput');
-      if (document.activeElement === input && input.value.trim()) saveEntry();
-    }
-  });
-
-  // =========================================
-  //  INIT
-  // =========================================
-  initTheme();
-  updateGreeting();
-  checkAuthState();
-  nextQuote();
-</script>
-</body>
-</html>
+    document.getElement
