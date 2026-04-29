@@ -1996,7 +1996,7 @@
     btn.textContent = 'Creating account...';
 
     try {
-      const { error } = await sb.auth.signUp({ email, password });
+      const { error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: 'https://jwalter-1.github.io/grateful/' } });
       if (error) {
         showAuthError('signup', error.message);
       } else {
