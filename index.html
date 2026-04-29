@@ -97,6 +97,60 @@
     font-weight: 300;
   }
 
+  .name-prompt {
+    margin-top: 12px;
+    padding: 14px 18px;
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+    animation: fadeSlideIn 0.4s ease;
+  }
+  .name-prompt.hidden { display: none; }
+  .name-prompt-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-weight: 400;
+  }
+  .name-prompt-row {
+    display: flex;
+    gap: 8px;
+  }
+  .name-prompt-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: var(--input-border);
+    border-radius: var(--radius-sm);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .name-prompt-input:focus {
+    border-color: var(--gold);
+  }
+  .name-prompt-btn {
+    padding: 8px 18px;
+    background: var(--gold);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity var(--transition);
+  }
+  .name-prompt-btn:hover { opacity: 0.85; }
+
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   /* Theme Toggle Button */
   .theme-toggle {
     position: absolute;
@@ -1506,6 +1560,13 @@
     </svg>
     <h1>Grateful</h1>
     <p id="greeting">A moment of reflection, every day</p>
+    <div id="namePrompt" class="name-prompt hidden">
+      <p class="name-prompt-text">What should we call you?</p>
+      <div class="name-prompt-row">
+        <input type="text" id="namePromptInput" class="name-prompt-input" placeholder="Your first name" maxlength="30" onkeydown="if(event.key==='Enter')saveNameFromPrompt()">
+        <button class="name-prompt-btn" onclick="saveNameFromPrompt()">Save</button>
+      </div>
+    </div>
   </div>
 
   <!-- Tab Bar -->
@@ -1767,6 +1828,7 @@
         await renderAll();
         initTheme();
         updateGreeting();
+        maybeShowNamePrompt();
         nextQuote();
       } else {
         document.getElementById('loginScreen').classList.remove('hidden');
@@ -1785,6 +1847,7 @@
       document.getElementById('loginScreen').classList.add('hidden');
       await loadUserProfile();
       updateGreeting();
+      maybeShowNamePrompt();
       await renderAll();
     } else {
       currentUser = null;
@@ -2480,9 +2543,38 @@
     const success = await updateProfile(displayName);
     if (success) {
       updateAvatar();
+      updateGreeting();
       showToast('Profile updated');
     } else {
       showToast('Failed to update profile');
+    }
+  }
+
+  async function saveNameFromPrompt() {
+    const input = document.getElementById('namePromptInput');
+    const name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    // Sync to the community tab's displayName field
+    document.getElementById('displayName').value = name;
+    const success = await updateProfile(name);
+    if (success) {
+      updateAvatar();
+      updateGreeting();
+      document.getElementById('namePrompt').classList.add('hidden');
+      showToast('Welcome, ' + name + '!');
+    } else {
+      showToast('Failed to save name — try again');
+    }
+  }
+
+  function maybeShowNamePrompt() {
+    const nameEl = document.getElementById('displayName');
+    const name = nameEl ? nameEl.value.trim() : '';
+    const prompt = document.getElementById('namePrompt');
+    if (!name && prompt) {
+      prompt.classList.remove('hidden');
+    } else if (prompt) {
+      prompt.classList.add('hidden');
     }
   }
 
