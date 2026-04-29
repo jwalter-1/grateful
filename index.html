@@ -2548,4 +2548,226 @@
   }
 
   async function createCommunity() {
-    c
+    const name = document.getElementById('newCommunityName').value.trim();
+    if (!name) { showToast('Enter a community name'); return; }
+    const policy = document.querySelector('input[name="invitePolicy"]:checked').value;
+    try {
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const rows = await pgPost('communities', {
+        name: name, created_by: currentUser.id, invite_code: code, invite_policy: policy
+      });
+      const data = rows[0];
+      await pgPost('community_members', {
+        community_id: data.id, user_id: currentUser.id, role: 'creator'
+      });
+      closeModal('createCommunityModal');
+      showToast('Community created!');
+      document.getElementById('inviteCodeDisplay').textContent = code;
+      document.getElementById('inviteCodeModal').classList.add('show');
+      await renderCommunity();
+    } catch (err) {
+      console.error('Create community error:', err);
+      showToast('Failed to create community');
+    }
+  }
+
+  async function joinCommunity() {
+    const code = document.getElementById('joinInviteCode').value.trim().toUpperCase();
+    if (!code || code.length < 4) { showToast('Enter a valid invite code'); return; }
+    try {
+      const communities = await pgGet('communities', 'select=id,name,invite_policy&invite_code=eq.' + code);
+      if (!communities.length) { showToast('Community not found — check the code'); return; }
+      const community = communities[0];
+      const existing = await pgGet('community_members',
+        'select=id&community_id=eq.' + community.id + '&user_id=eq.' + currentUser.id);
+      if (existing.length) { showToast("You're already in " + community.name); closeModal('joinCommunityModal'); return; }
+      if (community.invite_policy === 'restricted') { showToast('This community requires an invitation from the creator'); return; }
+      await pgPost('community_members', {
+        community_id: community.id, user_id: currentUser.id, role: 'member'
+      });
+      closeModal('joinCommunityModal');
+      showToast('Joined ' + community.name + '!');
+      await renderCommunity();
+    } catch (err) {
+      console.error('Join community error:', err);
+      showToast('Failed to join community');
+    }
+  }
+
+  function showInviteCode(code) {
+    document.getElementById('inviteCodeDisplay').textContent = code;
+    document.getElementById('inviteCodeModal').classList.add('show');
+  }
+
+  function copyInviteCode() {
+    const code = document.getElementById('inviteCodeDisplay').textContent;
+    navigator.clipboard.writeText(code).then(() => showToast('Code copied!')).catch(() => showToast('Code: ' + code));
+  }
+
+  async function leaveCommunity(communityId, communityName) {
+    if (!confirm('Leave ' + communityName + '?')) return;
+    try {
+      await pgDelete('community_members', 'community_id=eq.' + communityId + '&user_id=eq.' + currentUser.id);
+      showToast('Left ' + communityName);
+      await renderCommunity();
+    } catch (err) {
+      console.error('Leave community error:', err);
+      showToast('Failed to leave community');
+    }
+  }
+
+  async function exportSharedEntries() {
+    const entries = await loadEntries();
+    const name = document.getElementById('displayName').value.trim() || 'Anonymous';
+    const sharedEntries = entries.filter(function(e) { return e.shared_with !== 'private'; });
+    if (sharedEntries.length === 0) { showToast('No shared entries to export'); return; }
+    const exportData = {
+      type: 'grateful_community_export',
+      version: 1,
+      author: name,
+      exportedAt: new Date().toISOString(),
+      entries: sharedEntries.map(function(e) { return { date: e.date, text: e.text, createdAt: e.created_at }; })
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'grateful-export-' + name.replace(/\s+/g, '-') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Entries exported! Share the file with friends.');
+  }
+
+  // =========================================
+  //  COMMUNITY: RENDER
+  // =========================================
+  async function renderCommunity() {
+    const entries = await loadEntries();
+    const communities = await loadMyCommunities();
+    const displayName = document.getElementById('displayName').value.trim() || '';
+
+    // Update shared count
+    const sharedCount = entries.filter(function(e) { return e.shared_with !== 'private'; }).length;
+    document.getElementById('sharedCount').textContent = sharedCount + ' entries shared';
+
+    // Render communities list
+    const listEl = document.getElementById('communitiesList');
+    if (communities.length === 0) {
+      listEl.innerHTML = '<div class="community-empty">You haven\'t joined any communities yet.</div>';
+    } else {
+      listEl.innerHTML = communities.map(function(c) {
+        const isCreator = c.myRole === 'creator';
+        return '<div class="community-item">' +
+          '<div class="community-item-icon">' + c.name.charAt(0).toUpperCase() + '</div>' +
+          '<div class="community-item-info">' +
+            '<div class="community-item-name">' + escapeHtml(c.name) + '</div>' +
+            '<div class="community-item-meta">' + (isCreator ? 'Creator' : 'Member') + '</div>' +
+          '</div>' +
+          '<div class="community-item-actions">' +
+            (isCreator ? '<button class="community-item-btn" onclick="showInviteCode(\'' + c.invite_code + '\')" title="Invite code">&#128279;</button>' : '') +
+            '<button class="community-item-btn danger" onclick="leaveCommunity(\'' + c.id + '\', \'' + escapeHtml(c.name).replace(/'/g, "\\'") + '\')" title="Leave">&#10005;</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // Render community feed
+    const feedEl = document.getElementById('communityFeed');
+    if (communities.length === 0) {
+      feedEl.innerHTML = '<div class="community-empty">Join or create a community to see shared entries here.</div>';
+      return;
+    }
+
+    const feedItems = await loadCommunityFeed();
+    if (feedItems.length === 0) {
+      feedEl.innerHTML = '<div class="community-empty">No shared entries yet. Be the first!</div>';
+    } else {
+      feedEl.innerHTML = feedItems.map(function(e) {
+        const authorName = e.is_anonymous ? 'Anonymous' : (e.profiles?.display_name || 'Someone');
+        const isMe = e.user_id === currentUser.id;
+        return '<div class="feed-item">' +
+          '<div class="feed-author">' + escapeHtml(isMe ? (displayName || 'You') : authorName) + '</div>' +
+          '<div class="feed-text">' + escapeHtml(e.text) + '</div>' +
+          '<div class="feed-date">' + formatDate(e.date) + '</div>' +
+        '</div>';
+      }).join('');
+    }
+  }
+
+  // =========================================
+  //  RENDER ALL
+  // =========================================
+  async function renderAll() {
+    if (!currentUser) { console.log('[renderAll] No currentUser, skipping'); return; }
+    console.log('[renderAll] Starting render for user:', currentUser.id);
+
+    const entries = await loadEntries();
+    console.log('[renderAll] Got', entries.length, 'entries');
+    const today = todayStr();
+
+    document.getElementById('entryDate').textContent = formatDate(today);
+
+    // Streak
+    const streak = calcStreak(entries);
+    const best = Math.max(streak.best, bestStreakCache || 0);
+    document.getElementById('streakCount').textContent = streak.current;
+    document.getElementById('bestStreak').textContent = best;
+
+    const flame = document.getElementById('streakFlame');
+    if (streak.current > 0) {
+      flame.classList.add('active');
+      flame.innerHTML = '&#128293;';
+      flame.style.opacity = '1';
+      flame.style.filter = 'none';
+    } else {
+      flame.classList.remove('active');
+      flame.innerHTML = '&#128293;';
+      flame.style.opacity = '0.3';
+      flame.style.filter = 'grayscale(1)';
+    }
+
+    // Today's entry
+    const todayEntries = entries.filter(function(e) { return e.date === today; });
+    const todayDone = document.getElementById('todayDone');
+    const entryForm = document.getElementById('entryForm');
+    const addMore = document.getElementById('addMoreWrap');
+
+    if (todayEntries.length > 0) {
+      todayDone.style.display = 'flex';
+      const latest = todayEntries[todayEntries.length - 1];
+      document.getElementById('todayEntryPreview').textContent =
+        latest.text.length > 80 ? latest.text.slice(0, 80) + '...' : latest.text;
+      entryForm.style.display = 'none';
+      addMore.style.display = 'block';
+    } else {
+      todayDone.style.display = 'none';
+      entryForm.style.display = 'block';
+      addMore.style.display = 'none';
+    }
+
+    if (entries.length > 0) await showRandomRecall();
+    await renderStats();
+    await renderHistory();
+    await renderCommunity();
+  }
+
+  // =========================================
+  //  KEYBOARD SHORTCUTS
+  // =========================================
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      const input = document.getElementById('entryInput');
+      if (document.activeElement === input && input.value.trim()) saveEntry();
+    }
+  });
+
+  // =========================================
+  //  INIT
+  // =========================================
+  initTheme();
+  updateGreeting();
+  checkAuthState();
+  nextQuote();
+  </script>
+</body>
+</html>
