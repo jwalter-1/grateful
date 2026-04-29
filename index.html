@@ -1948,7 +1948,7 @@
         cleanInviteUrl();
         return;
       }
-      await pgPost('community_members', {
+      await pgPostNoReturn('community_members', {
         community_id: community.id, user_id: currentUser.id, role: 'member'
       });
       showToast('Joined ' + community.name + '!');
@@ -2268,6 +2268,16 @@
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  }
+
+  async function pgPostNoReturn(table, body) {
+    const res = await fetch(REST + '/' + table, {
+      method: 'POST',
+      headers: pgHeaders(),
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return true;
   }
 
   async function pgPatch(table, query, body) {
@@ -2820,7 +2830,7 @@
         name: name, created_by: currentUser.id, invite_code: code, invite_policy: policy
       });
       const data = rows[0];
-      await pgPost('community_members', {
+      await pgPostNoReturn('community_members', {
         community_id: data.id, user_id: currentUser.id, role: 'creator'
       });
       closeModal('createCommunityModal');
@@ -2845,7 +2855,7 @@
         'select=id&community_id=eq.' + community.id + '&user_id=eq.' + currentUser.id);
       if (existing.length) { showToast("You're already in " + community.name); closeModal('joinCommunityModal'); return; }
       if (community.invite_policy === 'restricted') { showToast('This community requires an invitation from the creator'); return; }
-      await pgPost('community_members', {
+      await pgPostNoReturn('community_members', {
         community_id: community.id, user_id: currentUser.id, role: 'member'
       });
       closeModal('joinCommunityModal');
