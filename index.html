@@ -833,13 +833,126 @@
     color: var(--text-muted);
   }
 
-  /* Community actions */
-  .community-actions {
+  /* Community button row */
+  .community-btn-row {
     display: flex;
     gap: 10px;
+    margin-top: 16px;
+  }
+  .community-btn-row .btn { flex: 1; justify-content: center; }
+
+  /* Communities list */
+  .communities-list { display: flex; flex-direction: column; gap: 10px; }
+  .community-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--input-bg);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .community-item:hover { background: var(--history-hover-bg); }
+  .community-item-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .community-item-info { flex: 1; min-width: 0; }
+  .community-item-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+  .community-item-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .community-item-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .community-item-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all var(--transition);
+  }
+  .community-item-btn:hover { color: var(--gold); background: rgba(200, 169, 81, 0.1); }
+  .community-item-btn.danger:hover { color: var(--accent-rose); background: rgba(212, 145, 123, 0.1); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: var(--shadow-lg);
+  }
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
     margin-bottom: 20px;
   }
-  .community-actions .btn { flex: 1; justify-content: center; }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+  }
+
+  /* Radio options */
+  .invite-policy-options { display: flex; flex-direction: column; gap: 8px; }
+  .radio-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .radio-option input[type="radio"] { accent-color: var(--gold); }
+
+  /* Invite code display */
+  .invite-code-display {
+    font-family: 'Inter', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: var(--gold);
+    padding: 16px;
+    background: var(--input-bg);
+    border-radius: var(--radius-sm);
+    margin: 8px 0;
+  }
 
   /* Community feed */
   .feed-list { display: flex; flex-direction: column; gap: 16px; }
@@ -1540,25 +1653,15 @@
       <button class="signout-btn" onclick="handleSignOut()">Sign out</button>
     </div>
 
-    <!-- Community Actions -->
+    <!-- My Communities -->
     <div class="card">
-      <div class="card-title">Share & Connect</div>
-      <div class="community-actions">
-        <button class="btn btn-primary" onclick="exportSharedEntries()">
-          &#128228; Export my entries
-        </button>
-        <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">
-          &#128229; Import friend's entries
-        </button>
-        <input type="file" id="importFile" class="file-input-hidden" accept=".json" onchange="importEntries(event)">
+      <div class="card-title">My Communities</div>
+      <div id="communitiesList" class="communities-list">
+        <div class="community-empty">You haven't joined any communities yet.</div>
       </div>
-    </div>
-
-    <!-- Community Members -->
-    <div class="card" id="membersCard">
-      <div class="card-title">Community Members</div>
-      <div id="membersList" class="members-list">
-        <div class="community-empty">Import a friend's entries to see them here.</div>
+      <div class="community-btn-row">
+        <button class="btn btn-primary" onclick="showCreateCommunityModal()">+ Create</button>
+        <button class="btn btn-secondary" onclick="showJoinCommunityModal()">Join with Code</button>
       </div>
     </div>
 
@@ -1566,10 +1669,66 @@
     <div class="card" id="feedCard">
       <div class="card-title">Community Feed</div>
       <div id="communityFeed">
-        <div class="community-empty">Share entries and import friends to see the feed.</div>
+        <div class="community-empty">Join or create a community to see shared entries here.</div>
       </div>
     </div>
 
+  </div>
+
+  <!-- Create Community Modal -->
+  <div class="modal-overlay" id="createCommunityModal">
+    <div class="modal">
+      <div class="modal-title">Create a Community</div>
+      <div class="login-input-group">
+        <label class="login-label">Community Name</label>
+        <input type="text" class="login-input" id="newCommunityName" placeholder="e.g. Family, Work Friends" maxlength="40">
+      </div>
+      <div class="login-input-group">
+        <label class="login-label">Who can join?</label>
+        <div class="invite-policy-options">
+          <label class="radio-option">
+            <input type="radio" name="invitePolicy" value="open" checked>
+            <span>Anyone with the invite code</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="invitePolicy" value="restricted">
+            <span>Only people I invite</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('createCommunityModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="createCommunity()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Join Community Modal -->
+  <div class="modal-overlay" id="joinCommunityModal">
+    <div class="modal">
+      <div class="modal-title">Join a Community</div>
+      <div class="login-input-group">
+        <label class="login-label">Invite Code</label>
+        <input type="text" class="login-input" id="joinInviteCode" placeholder="e.g. A3F29K" maxlength="6" style="text-transform: uppercase; letter-spacing: 3px; text-align: center; font-size: 18px;">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('joinCommunityModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="joinCommunity()">Join</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invite Code Display Modal -->
+  <div class="modal-overlay" id="inviteCodeModal">
+    <div class="modal" style="text-align: center;">
+      <div class="modal-title">Your Invite Code</div>
+      <div class="invite-code-display" id="inviteCodeDisplay">------</div>
+      <p style="font-size: 13px; color: var(--text-secondary); margin: 12px 0;">Share this code with people you want to invite.</p>
+      <div class="modal-actions" style="justify-content: center;">
+        <button class="btn btn-primary" onclick="copyInviteCode()">Copy Code</button>
+        <button class="btn btn-secondary" onclick="closeModal('inviteCodeModal')">Done</button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -2273,8 +2432,162 @@
   }
 
   // =========================================
-  //  COMMUNITY: EXPORT
+  //  COMMUNITY: SUPABASE FUNCTIONS
   // =========================================
+
+  async function loadMyCommunities() {
+    if (!currentUser) return [];
+    try {
+      const { data, error } = await sb
+        .from('community_members')
+        .select('community_id, role, communities(id, name, invite_code, invite_policy, created_by)')
+        .eq('user_id', currentUser.id);
+      if (error) throw error;
+      return (data || []).map(m => ({ ...m.communities, myRole: m.role }));
+    } catch (err) {
+      console.error('Load communities error:', err);
+      return [];
+    }
+  }
+
+  async function loadCommunityMembers(communityId) {
+    try {
+      const { data, error } = await sb
+        .from('community_members')
+        .select('user_id, role, profiles(display_name)')
+        .eq('community_id', communityId);
+      if (error) throw error;
+      return (data || []).map(m => ({
+        userId: m.user_id,
+        role: m.role,
+        name: m.profiles?.display_name || 'Anonymous'
+      }));
+    } catch (err) {
+      console.error('Load members error:', err);
+      return [];
+    }
+  }
+
+  async function loadCommunityFeed() {
+    if (!currentUser) return [];
+    try {
+      const communities = await loadMyCommunities();
+      const communityIds = communities.map(c => c.id);
+      if (communityIds.length === 0) return [];
+      const feedItems = [];
+      const { data: allEntries } = await sb
+        .from('entries')
+        .select('id, text, date, created_at, is_anonymous, user_id, shared_with, profiles(display_name)')
+        .eq('shared_with', 'all')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (allEntries) feedItems.push(...allEntries);
+      for (const cid of communityIds) {
+        const { data: cEntries } = await sb
+          .from('entries')
+          .select('id, text, date, created_at, is_anonymous, user_id, shared_with, profiles(display_name)')
+          .eq('shared_with', cid)
+          .order('created_at', { ascending: false })
+          .limit(30);
+        if (cEntries) feedItems.push(...cEntries);
+      }
+      const seen = new Set();
+      const unique = feedItems.filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
+      unique.sort((a, b) => b.created_at.localeCompare(a.created_at));
+      return unique.slice(0, 50);
+    } catch (err) {
+      console.error('Load feed error:', err);
+      return [];
+    }
+  }
+
+  function showCreateCommunityModal() {
+    document.getElementById('newCommunityName').value = '';
+    document.getElementById('createCommunityModal').classList.add('show');
+  }
+
+  function showJoinCommunityModal() {
+    document.getElementById('joinInviteCode').value = '';
+    document.getElementById('joinCommunityModal').classList.add('show');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+  }
+
+  async function createCommunity() {
+    const name = document.getElementById('newCommunityName').value.trim();
+    if (!name) { showToast('Enter a community name'); return; }
+    const policy = document.querySelector('input[name="invitePolicy"]:checked').value;
+    try {
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const { data, error } = await sb.from('communities').insert({
+        name: name, created_by: currentUser.id, invite_code: code, invite_policy: policy
+      }).select().single();
+      if (error) throw error;
+      await sb.from('community_members').insert({
+        community_id: data.id, user_id: currentUser.id, role: 'creator'
+      });
+      closeModal('createCommunityModal');
+      showToast('Community created!');
+      document.getElementById('inviteCodeDisplay').textContent = code;
+      document.getElementById('inviteCodeModal').classList.add('show');
+      await renderCommunity();
+    } catch (err) {
+      console.error('Create community error:', err);
+      showToast('Failed to create community');
+    }
+  }
+
+  async function joinCommunity() {
+    const code = document.getElementById('joinInviteCode').value.trim().toUpperCase();
+    if (!code || code.length < 4) { showToast('Enter a valid invite code'); return; }
+    try {
+      const { data: community, error: lookupErr } = await sb
+        .from('communities').select('id, name, invite_policy').eq('invite_code', code).single();
+      if (lookupErr || !community) { showToast('Community not found — check the code'); return; }
+      const { data: existing } = await sb.from('community_members')
+        .select('id').eq('community_id', community.id).eq('user_id', currentUser.id).single();
+      if (existing) { showToast("You're already in " + community.name); closeModal('joinCommunityModal'); return; }
+      if (community.invite_policy === 'restricted') { showToast('This community requires an invitation from the creator'); return; }
+      const { error: joinErr } = await sb.from('community_members').insert({
+        community_id: community.id, user_id: currentUser.id, role: 'member'
+      });
+      if (joinErr) throw joinErr;
+      closeModal('joinCommunityModal');
+      showToast('Joined ' + community.name + '!');
+      await renderCommunity();
+    } catch (err) {
+      console.error('Join community error:', err);
+      showToast('Failed to join community');
+    }
+  }
+
+  function showInviteCode(code) {
+    document.getElementById('inviteCodeDisplay').textContent = code;
+    document.getElementById('inviteCodeModal').classList.add('show');
+  }
+
+  function copyInviteCode() {
+    const code = document.getElementById('inviteCodeDisplay').textContent;
+    navigator.clipboard.writeText(code).then(() => showToast('Code copied!')).catch(() => showToast('Code: ' + code));
+  }
+
+  async function leaveCommunity(communityId, communityName) {
+    if (!confirm('Leave ' + communityName + '?')) return;
+    try {
+      const { error } = await sb.from('community_members').delete()
+        .eq('community_id', communityId).eq('user_id', currentUser.id);
+      if (error) throw error;
+      showToast('Left ' + communityName);
+      await renderCommunity();
+    } catch (err) {
+      console.error('Leave community error:', err);
+      showToast('Failed to leave community');
+    }
+  }
+
+  // Stub: keep old function name to avoid errors
   async function exportSharedEntries() {
     const entries = await loadEntries();
     const name = document.getElementById('displayName').value.trim() || '';
@@ -2313,18 +2626,69 @@
   }
 
   // =========================================
-  //  COMMUNITY: IMPORT
+  //  COMMUNITY: RENDER (Supabase)
   // =========================================
-  function importEntries(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+  async function renderCommunity() {
+    const entries = await loadEntries();
+    updateAvatar();
+    const sharedCount = entries.filter(e => e.shared_with && e.shared_with !== 'private').length;
+    document.getElementById('sharedCount').textContent = sharedCount + ' entr' + (sharedCount === 1 ? 'y' : 'ies') + ' shared';
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        const imported = JSON.parse(e.target.result);
-        if (imported.type !== 'grateful_community_export') {
-          showToast('Invalid file format');
+    const communities = await loadMyCommunities();
+    const list = document.getElementById('communitiesList');
+    if (communities.length === 0) {
+      list.innerHTML = '<div class="community-empty">You haven\'t joined any communities yet.</div>';
+    } else {
+      let html = '';
+      for (const c of communities) {
+        const members = await loadCommunityMembers(c.id);
+        const isCreator = c.myRole === 'creator';
+        html += '<div class="community-item">' +
+          '<div class="community-item-icon">' + c.name.charAt(0).toUpperCase() + '</div>' +
+          '<div class="community-item-info">' +
+            '<div class="community-item-name">' + escapeHtml(c.name) + '</div>' +
+            '<div class="community-item-meta">' + members.length + ' member' + (members.length !== 1 ? 's' : '') +
+              (isCreator ? ' &middot; Creator' : '') + '</div>' +
+          '</div>' +
+          '<div class="community-item-actions">' +
+            (isCreator ? '<button class="community-item-btn" onclick="showInviteCode(\'' + c.invite_code + '\')" title="Invite code">&#128279;</button>' : '') +
+            '<button class="community-item-btn danger" onclick="leaveCommunity(\'' + c.id + '\', \'' + escapeHtml(c.name).replace(/'/g, "\\'") + '\')" title="Leave">' +
+              (isCreator ? '&#128465;' : '&#10005;') + '</button>' +
+          '</div></div>';
+      }
+      list.innerHTML = html;
+    }
+
+    const feed = document.getElementById('communityFeed');
+    const feedItems = await loadCommunityFeed();
+    if (feedItems.length === 0) {
+      feed.innerHTML = '<div class="community-empty">Join or create a community to see shared entries here.</div>';
+    } else {
+      const colors = ['#7BAE7F','#D4917B','#7BA3AE','#C8A951','#A77BB5','#E8A87C'];
+      feed.innerHTML = feedItems.map((e, i) => {
+        const authorName = e.is_anonymous ? 'Anonymous' : (e.profiles?.display_name || 'Someone');
+        const isOwn = e.user_id === currentUser.id;
+        const displayName = isOwn ? (document.getElementById('displayName').value.trim() || 'You') : authorName;
+        const color = isOwn ? '#C8A951' : colors[i % colors.length];
+        return '<div class="feed-item"><div class="feed-item-header">' +
+          '<div class="feed-avatar" style="background:' + color + ';">' + displayName.charAt(0).toUpperCase() + '</div>' +
+          '<div class="feed-name">' + escapeHtml(displayName) + (isOwn ? ' (you)' : '') + '</div>' +
+          '<div class="feed-date">' + formatDateShort(e.date) + '</div></div>' +
+          '<div class="feed-text">' + escapeHtml(e.text) + '</div></div>';
+      }).join('');
+    }
+
+    const badge = document.getElementById('communityBadge');
+    if (communities.length > 0) { badge.textContent = communities.length; badge.style.display = 'inline-flex'; }
+    else { badge.style.display = 'none'; }
+  }
+
+  // Old stubs removed — replaced by Supabase community system above
+  function importEntries() { }
+  function loadCommunityLocal() { return { members: {} }; }
+  function saveCommunityLocal() { }
+  function removeMember() { }
+  /* REMOVED_OLD_COMMUNITY_CODE
           return;
         }
 
@@ -2441,8 +2805,7 @@
     delete community.members[name];
     saveCommunityLocal(community);
     showToast(name + ' removed from community');
-    renderCommunity();
-  }
+  REMOVED_OLD_COMMUNITY_CODE */
 
   // =========================================
   //  KEYBOARD SHORTCUTS
@@ -2507,16 +2870,8 @@
     await renderStats();
     await renderHistory();
 
-    // Update community badge count
-    const community = loadCommunityLocal();
-    const memberCount = Object.keys(community.members).length;
-    const badge = document.getElementById('communityBadge');
-    if (memberCount > 0) {
-      badge.textContent = memberCount;
-      badge.style.display = 'inline-flex';
-    } else {
-      badge.style.display = 'none';
-    }
+    // Community badge is updated by renderCommunity()
+    await renderCommunity();
   }
 
   // =========================================
