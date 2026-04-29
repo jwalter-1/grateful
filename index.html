@@ -1026,6 +1026,65 @@
     border-color: var(--gold);
   }
 
+  .member-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--input-bg);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+  }
+  .member-stat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1E1B16;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .member-stat-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .member-stat-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+  .member-stat-role {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .member-stat-nums {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .member-stat-num {
+    text-align: center;
+  }
+  .member-stat-num .num {
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .member-stat-num .label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+  }
+
   /* Community feed */
   .feed-list { display: flex; flex-direction: column; gap: 16px; }
   .feed-item {
@@ -1391,6 +1450,22 @@
     border-color: var(--accent-rose);
     color: var(--accent-rose);
   }
+  .signout-btn-inline {
+    background: none;
+    border: 1.5px solid var(--input-border);
+    color: var(--text-muted);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .signout-btn-inline:hover {
+    border-color: var(--accent-rose);
+    color: var(--accent-rose);
+  }
 
   /* ===== MOBILE RESPONSIVENESS ===== */
   @supports (-webkit-touch-callout: none) {
@@ -1722,17 +1797,16 @@
       <p class="community-subtitle">Share your gratitude practice with others</p>
     </div>
 
-    <!-- Profile Card -->
-    <div class="card">
-      <div class="card-title">Your Profile</div>
+    <!-- Profile Card (compact inline) -->
+    <div class="card" style="padding: 14px 20px;">
       <div class="profile-section">
         <div class="profile-avatar" id="profileAvatar">?</div>
         <div class="profile-info">
           <input type="text" class="profile-name-input" id="displayName" placeholder="Enter your name" maxlength="30" onchange="saveDisplayName()">
           <div class="profile-shared-count" id="sharedCount">0 entries shared</div>
         </div>
+        <button class="signout-btn-inline" onclick="handleSignOut()">Sign out</button>
       </div>
-      <button class="signout-btn" onclick="handleSignOut()">Sign out</button>
     </div>
 
     <!-- My Communities -->
@@ -1811,6 +1885,19 @@
         <button class="btn btn-primary" onclick="copyInviteLink()">Copy Link</button>
         <button class="btn btn-secondary" onclick="copyInviteCode()">Copy Code Only</button>
         <button class="btn btn-secondary" onclick="closeModal('inviteCodeModal')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Community Detail Modal -->
+  <div class="modal-overlay" id="communityDetailModal">
+    <div class="modal" style="max-width: 420px;">
+      <div class="modal-title" id="communityDetailTitle">Community</div>
+      <div id="communityDetailContent" style="margin: 12px 0;">
+        <div class="community-empty">Loading...</div>
+      </div>
+      <div class="modal-actions" style="justify-content: center;">
+        <button class="btn btn-secondary" onclick="closeModal('communityDetailModal')">Close</button>
       </div>
     </div>
   </div>
@@ -2804,6 +2891,58 @@
     }
   }
 
+  async function showCommunityDetail(communityId, communityName) {
+    document.getElementById('communityDetailTitle').textContent = communityName;
+    document.getElementById('communityDetailContent').innerHTML = '<div class="community-empty">Loading members...</div>';
+    document.getElementById('communityDetailModal').classList.add('show');
+    try {
+      const members = await loadCommunityMembers(communityId);
+      const memberHtml = [];
+      for (const m of members) {
+        let entryCount = 0;
+        let streak = 0;
+        try {
+          const entries = await pgGet('entries', 'select=date&user_id=eq.' + m.userId + '&order=date.desc');
+          entryCount = entries.length;
+          if (entries.length > 0) {
+            const today = todayStr();
+            const yd = new Date(); yd.setDate(yd.getDate() - 1);
+            const yesterday = yd.getFullYear() + '-' + String(yd.getMonth() + 1).padStart(2, '0') + '-' + String(yd.getDate()).padStart(2, '0');
+            const dates = [...new Set(entries.map(function(e) { return e.date; }))].sort().reverse();
+            if (dates[0] === today || dates[0] === yesterday) {
+              streak = 1;
+              for (let i = 1; i < dates.length; i++) {
+                const prev = new Date(dates[i - 1] + 'T00:00:00');
+                const curr = new Date(dates[i] + 'T00:00:00');
+                const diff = (prev - curr) / (1000 * 60 * 60 * 24);
+                if (diff === 1) streak++;
+                else break;
+              }
+            }
+          }
+        } catch (e) { }
+        const initial = m.name ? m.name.charAt(0).toUpperCase() : '?';
+        memberHtml.push(
+          '<div class="member-stat-card">' +
+            '<div class="member-stat-avatar">' + initial + '</div>' +
+            '<div class="member-stat-info">' +
+              '<div class="member-stat-name">' + escapeHtml(m.name) + '</div>' +
+              '<div class="member-stat-role">' + m.role + '</div>' +
+            '</div>' +
+            '<div class="member-stat-nums">' +
+              '<div class="member-stat-num"><div class="num">' + streak + '</div><div class="label">Streak</div></div>' +
+              '<div class="member-stat-num"><div class="num">' + entryCount + '</div><div class="label">Entries</div></div>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+      document.getElementById('communityDetailContent').innerHTML = memberHtml.join('') || '<div class="community-empty">No members yet.</div>';
+    } catch (err) {
+      console.error('Load community detail error:', err);
+      document.getElementById('communityDetailContent').innerHTML = '<div class="community-empty">Failed to load members.</div>';
+    }
+  }
+
   async function exportSharedEntries() {
     const entries = await loadEntries();
     const name = document.getElementById('displayName').value.trim() || 'Anonymous';
@@ -2846,10 +2985,12 @@
       listEl.innerHTML = communities.map(function(c) {
         const isCreator = c.myRole === 'creator';
         return '<div class="community-item">' +
-          '<div class="community-item-icon">' + c.name.charAt(0).toUpperCase() + '</div>' +
-          '<div class="community-item-info">' +
-            '<div class="community-item-name">' + escapeHtml(c.name) + '</div>' +
-            '<div class="community-item-meta">' + (isCreator ? 'Creator' : 'Member') + '</div>' +
+          '<div class="community-item-clickable" onclick="showCommunityDetail(\'' + c.id + '\', \'' + escapeHtml(c.name).replace(/'/g, "\\'") + '\')" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer;">' +
+            '<div class="community-item-icon">' + c.name.charAt(0).toUpperCase() + '</div>' +
+            '<div class="community-item-info">' +
+              '<div class="community-item-name">' + escapeHtml(c.name) + '</div>' +
+              '<div class="community-item-meta">' + (isCreator ? 'Creator' : 'Member') + '</div>' +
+            '</div>' +
           '</div>' +
           '<div class="community-item-actions">' +
             (isCreator ? '<button class="community-item-btn" onclick="showInviteCode(\'' + c.invite_code + '\')" title="Invite code">&#128279;</button>' : '') +
