@@ -1759,6 +1759,7 @@
         currentUser = user;
         document.getElementById('loginScreen').classList.add('hidden');
         await loadUserProfile();
+        await fixMisdatedEntries();
         await renderAll();
         initTheme();
         updateGreeting();
@@ -2128,7 +2129,8 @@
   //  HELPERS
   // =========================================
   function todayStr() {
-    return new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
   function formatDate(dateStr) {
@@ -2161,7 +2163,8 @@
     if (!entries.length) return { current: 0, best: 0 };
     const dates = [...new Set(entries.map(e => e.date))].sort().reverse();
     const today = todayStr();
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const yd = new Date(); yd.setDate(yd.getDate() - 1);
+    const yesterday = yd.getFullYear() + '-' + String(yd.getMonth() + 1).padStart(2, '0') + '-' + String(yd.getDate()).padStart(2, '0');
 
     let current = 0;
     if (dates[0] === today || dates[0] === yesterday) {
@@ -2437,7 +2440,8 @@
   async function renderStats() {
     const entries = await loadEntries();
     const today = todayStr();
-    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const wa = new Date(); wa.setDate(wa.getDate() - 7);
+    const weekAgo = wa.getFullYear() + '-' + String(wa.getMonth() + 1).padStart(2, '0') + '-' + String(wa.getDate()).padStart(2, '0');
     const monthStart = today.slice(0, 7);
 
     document.getElementById('totalEntries').textContent = entries.length;
@@ -2760,6 +2764,30 @@
       if (document.activeElement === input && input.value.trim()) saveEntry();
     }
   });
+
+  // =========================================
+  //  ONE-TIME FIX: entries saved with UTC date instead of local date
+  //  Safe to remove after running once (2026-04-29)
+  // =========================================
+  async function fixMisdatedEntries() {
+    if (!currentUser) return;
+    if (localStorage.getItem('grateful_date_fix_done')) return;
+    try {
+      const entries = await pgGet('entries', 'select=id,date,created_at&user_id=eq.' + currentUser.id + '&date=eq.2026-04-29');
+      for (const e of entries) {
+        const createdLocal = new Date(e.created_at);
+        const localDate = createdLocal.getFullYear() + '-' + String(createdLocal.getMonth() + 1).padStart(2, '0') + '-' + String(createdLocal.getDate()).padStart(2, '0');
+        if (localDate === '2026-04-28' && e.date === '2026-04-29') {
+          console.log('[fix] Correcting entry', e.id, 'from 2026-04-29 to 2026-04-28');
+          await pgPatch('entries', 'id=eq.' + e.id, { date: '2026-04-28' });
+        }
+      }
+      localStorage.setItem('grateful_date_fix_done', '1');
+      console.log('[fix] Date correction complete');
+    } catch (err) {
+      console.error('[fix] Date correction failed:', err);
+    }
+  }
 
   // =========================================
   //  INIT
