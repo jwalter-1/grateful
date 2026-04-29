@@ -1743,13 +1743,16 @@
   const SUPABASE_URL = 'https://cijacjduhstkmwibddio.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpamFjamR1aHN0a213aWJkZGlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDczNTMsImV4cCI6MjA5Mjk4MzM1M30.6vg6frrV0kJJdl26TXPaEwHsKI95zfQY48kwZqsyYb8';
 
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  window._sb = sb;  // expose for console debugging
-  console.log('[init] Supabase client created, testing DB connectivity...');
-  sb.from('profiles').select('id').limit(1).then(({ data, error }) => {
-    if (error) console.error('[init] DB connectivity test FAILED:', error);
-    else console.log('[init] DB connectivity test OK — PostgREST is reachable');
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      storageKey: 'sb-cijacjduhstkmwibddio-auth-token',
+      lock: async (name, acquireTimeout, fn) => {
+        // Simple in-tab lock — avoids navigator.locks deadlock from stale ghost locks
+        return fn();
+      }
+    }
   });
+  window._sb = sb;  // expose for console debugging
   let currentUser = null;
   window._cu = () => currentUser;  // expose for console debugging
   let bestStreakCache = 0;
