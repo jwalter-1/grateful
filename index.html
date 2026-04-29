@@ -2014,7 +2014,7 @@
     try {
       const session = JSON.parse(localStorage.getItem('sb-cijacjduhstkmwibddio-auth-token') || '{}');
       return session?.access_token || null;
-    } catch { return null; }
+    } catch(e) { return null; }
   }
 
   function pgHeaders(preferHeader) {
@@ -2547,4 +2547,4 @@
   }
 
   function showJoinCommunityModal() {
-    document.getElement
+    document.getElem
