@@ -1744,7 +1744,9 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpamFjamR1aHN0a213aWJkZGlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDczNTMsImV4cCI6MjA5Mjk4MzM1M30.6vg6frrV0kJJdl26TXPaEwHsKI95zfQY48kwZqsyYb8';
 
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window._sb = sb;  // expose for console debugging
   let currentUser = null;
+  window._cu = () => currentUser;  // expose for console debugging
   let bestStreakCache = 0;
 
   // =========================================
@@ -1771,13 +1773,16 @@
   }
 
   sb.auth.onAuthStateChange(async (event, session) => {
+    console.log('[auth] State change:', event, 'session:', !!session);
     if (session) {
       currentUser = session.user;
+      console.log('[auth] User signed in:', currentUser.id);
       document.getElementById('loginScreen').classList.add('hidden');
       await loadUserProfile();
       await renderAll();
     } else {
       currentUser = null;
+      console.log('[auth] User signed out');
       document.getElementById('loginScreen').classList.remove('hidden');
     }
   });
@@ -2006,7 +2011,8 @@
   //  DATA LAYER (Supabase)
   // =========================================
   async function loadEntries() {
-    if (!currentUser) return [];
+    if (!currentUser) { console.log('[loadEntries] No currentUser, returning []'); return []; }
+    console.log('[loadEntries] Fetching entries for user:', currentUser.id);
     try {
       const { data, error } = await sb
         .from('entries')
@@ -2014,10 +2020,11 @@
         .eq('user_id', currentUser.id)
         .order('date', { ascending: false });
 
+      console.log('[loadEntries] Result:', { count: data?.length, error, data });
       if (error) throw error;
       return data || [];
     } catch (err) {
-      console.error('Load entries error:', err);
+      console.error('[loadEntries] Error:', err);
       return [];
     }
   }
@@ -2821,9 +2828,11 @@
   //  RENDER ALL
   // =========================================
   async function renderAll() {
-    if (!currentUser) return;
+    if (!currentUser) { console.log('[renderAll] No currentUser, skipping'); return; }
+    console.log('[renderAll] Starting render for user:', currentUser.id);
 
     const entries = await loadEntries();
+    console.log('[renderAll] Got', entries.length, 'entries');
     const today = todayStr();
 
     document.getElementById('entryDate').textContent = formatDate(today);
