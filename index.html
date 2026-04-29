@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grateful — Daily Gratitude Journal</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -971,6 +972,241 @@
     100% { box-shadow: var(--card-shadow); }
   }
 
+  /* LOGIN SCREEN */
+  .login-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--page-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .login-screen.hidden {
+    display: none;
+  }
+  .login-container {
+    max-width: 400px;
+    width: 100%;
+    padding: 20px;
+  }
+  .login-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .login-icon {
+    margin-bottom: 16px;
+  }
+  .login-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+  [data-theme="dark"] .login-header h1 {
+    color: var(--gold-light);
+  }
+  .login-header p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .login-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 24px;
+    box-shadow: var(--card-shadow);
+  }
+  .login-tab {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 12px;
+    background: var(--tab-inactive-bg);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--tab-inactive-text);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .login-tab.active {
+    background: var(--tab-active-bg);
+    color: var(--tab-active-text);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .login-form {
+    display: none;
+  }
+  .login-form.active {
+    display: block;
+  }
+  .login-input-group {
+    margin-bottom: 16px;
+  }
+  .login-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .login-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: var(--input-border);
+    border-radius: var(--radius-sm);
+    background: var(--input-bg);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .login-input:focus {
+    border-color: var(--gold);
+  }
+  .login-input::placeholder { color: var(--text-muted); }
+
+  .login-submit {
+    width: 100%;
+    padding: 12px 24px;
+    background: var(--gold);
+    color: #1E1B16;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-bottom: 12px;
+  }
+  .login-submit:hover {
+    background: #B8993F;
+    transform: translateY(-1px);
+  }
+  .login-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .login-divider {
+    text-align: center;
+    margin: 16px 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .login-divider::before {
+    content: '';
+    display: block;
+    height: 1px;
+    background: var(--input-border);
+    margin-bottom: 8px;
+  }
+  .login-divider::after {
+    content: '';
+    display: block;
+    height: 1px;
+    background: var(--input-border);
+    margin-top: 8px;
+  }
+
+  .login-google {
+    width: 100%;
+    padding: 12px 24px;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1.5px solid var(--input-border);
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .login-google:hover {
+    border-color: var(--gold);
+    background: rgba(200, 169, 81, 0.05);
+  }
+
+  .login-magic {
+    width: 100%;
+    padding: 10px 24px;
+    background: transparent;
+    color: var(--gold);
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-top: 4px;
+    opacity: 0.8;
+  }
+  .login-magic:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+
+  .login-error {
+    padding: 12px;
+    background: rgba(212, 145, 123, 0.1);
+    border: 1px solid rgba(212, 145, 123, 0.2);
+    border-radius: var(--radius-sm);
+    color: var(--accent-rose);
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .login-error.show {
+    display: block;
+  }
+
+  .login-loading {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .profile-section {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .signout-btn {
+    background: none;
+    border: 1.5px solid var(--input-border);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition);
+    margin-top: 12px;
+    width: 100%;
+  }
+  .signout-btn:hover {
+    border-color: var(--accent-rose);
+    color: var(--accent-rose);
+  }
+
   /* ===== MOBILE RESPONSIVENESS ===== */
   @supports (-webkit-touch-callout: none) {
     .entry-textarea { font-size: 16px; }
@@ -1043,6 +1279,9 @@
     .share-option { padding: 11px 12px; font-size: 12px; }
     .toast { left: 16px; right: 16px; transform: translateX(0) translateY(80px); text-align: center; }
     .toast.show { transform: translateX(0) translateY(0); }
+    .login-container { padding: 12px; }
+    .login-header { margin-bottom: 32px; }
+    .login-header h1 { font-size: 28px; }
   }
   @media (max-width: 360px) {
     .app { padding: 10px 12px 100px; }
@@ -1055,6 +1294,74 @@
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-container">
+    <div class="login-header">
+      <svg class="login-icon" width="44" height="40" viewBox="0 0 44 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0 auto 16px;">
+        <path d="M22 16C22 16 18 12 10 12C8 12 6 13 6 15V32C6 34 8 34 10 34C18 34 22 38 22 38" fill="var(--gold)" opacity="0.1"/>
+        <path d="M22 16C22 16 26 12 34 12C36 12 38 13 38 15V32C38 34 36 34 34 34C26 34 22 38 22 38" fill="var(--gold)" opacity="0.1"/>
+        <path d="M22 16C22 16 18 12 10 12C8 12 6 13 6 15V32C6 34 8 34 10 34C18 34 22 38 22 38" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M22 16C22 16 26 12 34 12C36 12 38 13 38 15V32C38 34 36 34 34 34C26 34 22 38 22 38" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M22 16V38" stroke="var(--gold)" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M36 2C33 4 29 9 27 14L26 17L28 16C30 14 32 12 32 12L31 11C31 11 34 7 37 4C38 3 37.5 1.5 36 2Z" fill="var(--gold)" opacity="0.25" stroke="var(--gold)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h1>Grateful</h1>
+      <p>Your daily gratitude practice</p>
+    </div>
+
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="switchAuthTab('signin')" id="signinTab">Sign In</button>
+      <button class="login-tab" onclick="switchAuthTab('signup')" id="signupTab">Sign Up</button>
+    </div>
+
+    <div id="signinForm" class="login-form active">
+      <div class="login-error" id="signinError"></div>
+      <div class="login-input-group">
+        <label class="login-label">Email</label>
+        <input type="email" class="login-input" id="signinEmail" placeholder="you@example.com">
+      </div>
+      <div class="login-input-group">
+        <label class="login-label">Password</label>
+        <input type="password" class="login-input" id="signinPassword" placeholder="••••••••">
+      </div>
+      <button class="login-submit" onclick="handleSignIn()" id="signinSubmit">Sign In</button>
+      <div class="login-divider">or</div>
+      <button class="login-google" onclick="handleGoogleAuth('signin')">
+        <span>Google Sign In</span>
+      </button>
+      <button class="login-magic" onclick="handleMagicLink()" id="magicLinkBtn">
+        <span>Send me a Magic Link instead</span>
+      </button>
+    </div>
+
+    <div id="signupForm" class="login-form">
+      <div class="login-error" id="signupError"></div>
+      <div class="login-input-group">
+        <label class="login-label">Email</label>
+        <input type="email" class="login-input" id="signupEmail" placeholder="you@example.com">
+      </div>
+      <div class="login-input-group">
+        <label class="login-label">Password</label>
+        <input type="password" class="login-input" id="signupPassword" placeholder="••••••••">
+      </div>
+      <div class="login-input-group">
+        <label class="login-label">Confirm Password</label>
+        <input type="password" class="login-input" id="signupPasswordConfirm" placeholder="••••••••">
+      </div>
+      <button class="login-submit" onclick="handleSignUp()" id="signupSubmit">Create Account</button>
+      <div class="login-divider">or</div>
+      <button class="login-google" onclick="handleGoogleAuth('signup')">
+        <span>Sign Up with Google</span>
+      </button>
+      <button class="login-magic" onclick="handleMagicLink()" id="magicLinkBtn2">
+        <span>Send me a Magic Link instead</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="app" id="app">
 
   <!-- Header -->
@@ -1227,9 +1534,10 @@
         <div class="profile-avatar" id="profileAvatar">?</div>
         <div class="profile-info">
           <input type="text" class="profile-name-input" id="displayName" placeholder="Enter your name" maxlength="30" onchange="saveDisplayName()">
-          <div class="profile-stat" id="sharedCount">0 entries shared</div>
+          <div class="profile-shared-count" id="sharedCount">0 entries shared</div>
         </div>
       </div>
+      <button class="signout-btn" onclick="handleSignOut()">Sign out</button>
     </div>
 
     <!-- Community Actions -->
@@ -1270,6 +1578,213 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  // =========================================
+  //  SUPABASE INITIALIZATION
+  // =========================================
+  const SUPABASE_URL = 'https://cijacjduhstkmwibddio.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpamFjamR1aHN0a213aWJkZGlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDczNTMsImV4cCI6MjA5Mjk4MzM1M30.6vg6frrV0kJJdl26TXPaEwHsKI95zfQY48kwZqsyYb8';
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let currentUser = null;
+  let bestStreakCache = 0;
+
+  // =========================================
+  //  AUTH STATE
+  // =========================================
+  async function checkAuthState() {
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) {
+        currentUser = user;
+        document.getElementById('loginScreen').classList.add('hidden');
+        await loadUserProfile();
+        await renderAll();
+        initTheme();
+        updateGreeting();
+        nextQuote();
+      } else {
+        document.getElementById('loginScreen').classList.remove('hidden');
+        initTheme();
+      }
+    } catch (err) {
+      console.error('Auth state error:', err);
+    }
+  }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (session) {
+      currentUser = session.user;
+      document.getElementById('loginScreen').classList.add('hidden');
+      await loadUserProfile();
+      await renderAll();
+    } else {
+      currentUser = null;
+      document.getElementById('loginScreen').classList.remove('hidden');
+    }
+  });
+
+  // =========================================
+  //  AUTH UI
+  // =========================================
+  function switchAuthTab(tab) {
+    document.getElementById('signinTab').classList.toggle('active', tab === 'signin');
+    document.getElementById('signupTab').classList.toggle('active', tab === 'signup');
+    document.getElementById('signinForm').classList.toggle('active', tab === 'signin');
+    document.getElementById('signupForm').classList.toggle('active', tab === 'signup');
+    clearAuthErrors();
+  }
+
+  function clearAuthErrors() {
+    document.getElementById('signinError').classList.remove('show');
+    document.getElementById('signupError').classList.remove('show');
+  }
+
+  function showAuthError(tab, msg) {
+    const el = document.getElementById(tab + 'Error');
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  async function handleSignIn() {
+    const email = document.getElementById('signinEmail').value.trim();
+    const password = document.getElementById('signinPassword').value;
+
+    if (!email || !password) {
+      showAuthError('signin', 'Please enter email and password');
+      return;
+    }
+
+    const btn = document.getElementById('signinSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+
+    try {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        showAuthError('signin', error.message);
+      }
+    } catch (err) {
+      showAuthError('signin', 'Sign in failed');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  }
+
+  async function handleSignUp() {
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const confirm = document.getElementById('signupPasswordConfirm').value;
+
+    if (!email || !password || !confirm) {
+      showAuthError('signup', 'Please fill in all fields');
+      return;
+    }
+    if (password !== confirm) {
+      showAuthError('signup', 'Passwords do not match');
+      return;
+    }
+    if (password.length < 6) {
+      showAuthError('signup', 'Password must be at least 6 characters');
+      return;
+    }
+
+    const btn = document.getElementById('signupSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Creating account...';
+
+    try {
+      const { error } = await sb.auth.signUp({ email, password });
+      if (error) {
+        showAuthError('signup', error.message);
+      } else {
+        showToast('Check your email to confirm your account');
+        document.getElementById('signupEmail').value = '';
+        document.getElementById('signupPassword').value = '';
+        document.getElementById('signupPasswordConfirm').value = '';
+        switchAuthTab('signin');
+      }
+    } catch (err) {
+      showAuthError('signup', 'Sign up failed');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
+  }
+
+  async function handleGoogleAuth(mode) {
+    try {
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.href }
+      });
+      if (error) console.error('Google auth error:', error);
+    } catch (err) {
+      console.error('Google auth failed:', err);
+    }
+  }
+
+  async function handleMagicLink() {
+    const emailEl = document.getElementById('signinEmail') || document.getElementById('signupEmail');
+    const email = (document.getElementById('signinEmail').value || document.getElementById('signupEmail').value).trim();
+    if (!email) {
+      showAuthError('signin', 'Enter your email first, then click Magic Link');
+      return;
+    }
+    try {
+      const { error } = await sb.auth.signInWithOtp({
+        email: email,
+        options: { emailRedirectTo: window.location.href }
+      });
+      if (error) {
+        showAuthError('signin', error.message);
+      } else {
+        showAuthError('signin', '');
+        const btn = document.getElementById('magicLinkBtn');
+        if (btn) btn.innerHTML = '<span>Check your inbox for the link!</span>';
+        const btn2 = document.getElementById('magicLinkBtn2');
+        if (btn2) btn2.innerHTML = '<span>Check your inbox for the link!</span>';
+      }
+    } catch (err) {
+      showAuthError('signin', 'Magic link failed — try again');
+    }
+  }
+
+  async function handleSignOut() {
+    const { error } = await sb.auth.signOut();
+    if (!error) {
+      currentUser = null;
+      document.getElementById('loginScreen').classList.remove('hidden');
+      showToast('You have been signed out');
+    }
+  }
+
+  async function loadUserProfile() {
+    if (!currentUser) return;
+    try {
+      const { data, error } = await sb
+        .from('profiles')
+        .select('display_name')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (data) {
+        document.getElementById('displayName').value = data.display_name || '';
+        updateAvatar();
+      } else if (error) {
+        // Profile doesn't exist yet, create it
+        console.log('Creating profile for user:', currentUser.id);
+        const { error: insertErr } = await sb.from('profiles').upsert({
+          id: currentUser.id,
+          display_name: ''
+        }, { onConflict: 'id' });
+        if (insertErr) console.error('Profile creation error:', insertErr);
+      }
+    } catch (err) {
+      console.error('Load profile error:', err);
+    }
+  }
+
   // =========================================
   //  THEME
   // =========================================
@@ -1329,41 +1844,79 @@
   }
 
   // =========================================
-  //  DATA LAYER (localStorage)
+  //  DATA LAYER (Supabase)
   // =========================================
-  const STORAGE_KEY = 'grateful_journal';
-  const COMMUNITY_KEY = 'grateful_community';
-
-  function loadData() {
+  async function loadEntries() {
+    if (!currentUser) return [];
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const data = JSON.parse(raw);
-        data.entries = (data.entries || []).map(e => ({
-          ...e,
-          shared: e.shared !== undefined ? e.shared : true
-        }));
-        if (!data.displayName) data.displayName = '';
-        return data;
-      }
-    } catch (e) { console.warn('Failed to load data', e); }
-    return { entries: [], bestStreak: 0, displayName: '' };
+      const { data, error } = await sb
+        .from('entries')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error('Load entries error:', err);
+      return [];
+    }
   }
 
-  function saveData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
-
-  function loadCommunity() {
+  async function insertEntry(text, sharedWith) {
+    if (!currentUser) return null;
     try {
-      const raw = localStorage.getItem(COMMUNITY_KEY);
-      if (raw) return JSON.parse(raw);
-    } catch (e) { console.warn('Failed to load community', e); }
-    return { members: {} };
+      const { data, error } = await sb
+        .from('entries')
+        .insert({
+          user_id: currentUser.id,
+          text: text,
+          date: todayStr(),
+          shared_with: sharedWith,
+          is_anonymous: false
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Insert entry error:', err);
+      return null;
+    }
   }
 
-  function saveCommunity(data) {
-    localStorage.setItem(COMMUNITY_KEY, JSON.stringify(data));
+  async function deleteEntryFromDB(id) {
+    if (!currentUser) return false;
+    try {
+      const { error } = await sb
+        .from('entries')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', currentUser.id);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('Delete entry error:', err);
+      return false;
+    }
+  }
+
+  async function updateProfile(displayName) {
+    if (!currentUser) return false;
+    try {
+      const { error } = await sb
+        .from('profiles')
+        .update({ display_name: displayName, updated_at: new Date().toISOString() })
+        .eq('id', currentUser.id);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('Update profile error:', err);
+      return false;
+    }
   }
 
   // =========================================
@@ -1556,14 +2109,12 @@
   }
 
   function getShareBadge(entry) {
-    if (entry.sharedWith) {
-      if (entry.sharedWith === 'private') return '<span class="history-private-badge">\u{1F512} Private</span>';
-      if (entry.sharedWith === 'all') return '<span class="history-shared-badge">\u{1F310} All Communities</span>';
-      return '<span class="history-shared-badge">\u{1F310} ' + escapeHtml(entry.sharedWith) + '</span>';
+    if (entry.shared_with) {
+      if (entry.shared_with === 'private') return '<span class="history-private-badge">\u{1F512} Private</span>';
+      if (entry.shared_with === 'all') return '<span class="history-shared-badge">\u{1F310} All Communities</span>';
+      return '<span class="history-shared-badge">\u{1F310} ' + escapeHtml(entry.shared_with) + '</span>';
     }
-    return entry.shared
-      ? '<span class="history-shared-badge">\u{1F310} Shared</span>'
-      : '<span class="history-private-badge">\u{1F512} Private</span>';
+    return '<span class="history-shared-badge">\u{1F310} Shared</span>';
   }
 
   document.addEventListener('click', function(e) {
@@ -1576,7 +2127,12 @@
   // =========================================
   //  SAVE ENTRY
   // =========================================
-  function saveEntry() {
+  async function saveEntry() {
+    if (!currentUser) {
+      showToast('Please sign in first');
+      return;
+    }
+
     const input = document.getElementById('entryInput');
     const text = input.value.trim();
     if (!text) {
@@ -1586,43 +2142,36 @@
     }
 
     const sharedWith = getShareSelection();
-    const shared = sharedWith !== 'private';
-    const data = loadData();
-    const entry = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      date: todayStr(),
-      text: text,
-      shared: shared,
-      sharedWith: sharedWith,
-      createdAt: new Date().toISOString()
-    };
-    data.entries.push(entry);
+    const result = await insertEntry(text, sharedWith);
 
-    const streak = calcStreak(data.entries);
-    data.bestStreak = Math.max(data.bestStreak || 0, streak.best);
-    saveData(data);
-    input.value = '';
+    if (result) {
+      input.value = '';
 
-    const card = document.getElementById('entryCard');
-    card.classList.add('save-anim');
-    setTimeout(() => card.classList.remove('save-anim'), 600);
+      const card = document.getElementById('entryCard');
+      card.classList.add('save-anim');
+      setTimeout(() => card.classList.remove('save-anim'), 600);
 
-    const toastMsg = sharedWith === 'private' ? 'Saved privately ✓'
-      : sharedWith === 'all' ? 'Saved & shared with all communities ✓'
-      : 'Saved & shared with ' + sharedWith + ' ✓';
-    showToast(toastMsg);
-    renderAll();
+      const toastMsg = sharedWith === 'private' ? 'Saved privately ✓'
+        : sharedWith === 'all' ? 'Saved & shared with all communities ✓'
+        : 'Saved & shared with ' + sharedWith + ' ✓';
+      showToast(toastMsg);
+      await renderAll();
+    } else {
+      showToast('Failed to save entry');
+    }
   }
 
   // =========================================
   //  DELETE ENTRY
   // =========================================
-  function deleteEntry(id) {
-    const data = loadData();
-    data.entries = data.entries.filter(e => e.id !== id);
-    saveData(data);
-    showToast('Entry removed');
-    renderAll();
+  async function deleteEntry(id) {
+    const success = await deleteEntryFromDB(id);
+    if (success) {
+      showToast('Entry removed');
+      await renderAll();
+    } else {
+      showToast('Failed to delete entry');
+    }
   }
 
   function showEntryForm() {
@@ -1641,19 +2190,19 @@
     renderHistory();
   }
 
-  function renderHistory() {
-    const data = loadData();
-    const entries = [...data.entries].reverse();
+  async function renderHistory() {
+    const entries = await loadEntries();
+    const entriesReversed = [...entries].reverse();
     const list = document.getElementById('historyList');
     const toggle = document.getElementById('historyToggle');
 
-    if (entries.length === 0) {
+    if (entriesReversed.length === 0) {
       list.innerHTML = '<div class="history-empty">Your journey begins with your first entry.</div>';
       toggle.style.display = 'none';
       return;
     }
 
-    const show = historyExpanded ? entries : entries.slice(0, 5);
+    const show = historyExpanded ? entriesReversed : entriesReversed.slice(0, 5);
     list.innerHTML = show.map(e => `
       <div class="history-item">
         <div class="history-dot"></div>
@@ -1668,10 +2217,10 @@
       </div>
     `).join('');
 
-    if (entries.length > 5) {
+    if (entriesReversed.length > 5) {
       toggle.style.display = 'block';
       toggle.querySelector('button').textContent = historyExpanded
-        ? 'Show less' : 'Show all ' + entries.length + ' entries';
+        ? 'Show less' : 'Show all ' + entriesReversed.length + ' entries';
     } else {
       toggle.style.display = 'none';
     }
@@ -1680,9 +2229,8 @@
   // =========================================
   //  STATS
   // =========================================
-  function renderStats() {
-    const data = loadData();
-    const entries = data.entries;
+  async function renderStats() {
+    const entries = await loadEntries();
     const today = todayStr();
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
     const monthStart = today.slice(0, 7);
@@ -1695,10 +2243,10 @@
   // =========================================
   //  RANDOM RECALL
   // =========================================
-  function showRandomRecall() {
-    const data = loadData();
-    if (data.entries.length === 0) return;
-    const entry = data.entries[Math.floor(Math.random() * data.entries.length)];
+  async function showRandomRecall() {
+    const entries = await loadEntries();
+    if (entries.length === 0) return;
+    const entry = entries[Math.floor(Math.random() * entries.length)];
     const content = document.getElementById('recallContent');
     content.innerHTML = '<div class="recall-text">' + escapeHtml(entry.text) + '</div><div class="recall-date">' + formatDate(entry.date) + '</div>';
     document.getElementById('recallFooter').style.display = 'flex';
@@ -1707,16 +2255,19 @@
   // =========================================
   //  COMMUNITY: DISPLAY NAME
   // =========================================
-  function saveDisplayName() {
-    const data = loadData();
-    data.displayName = document.getElementById('displayName').value.trim();
-    saveData(data);
-    updateAvatar();
+  async function saveDisplayName() {
+    const displayName = document.getElementById('displayName').value.trim();
+    const success = await updateProfile(displayName);
+    if (success) {
+      updateAvatar();
+      showToast('Profile updated');
+    } else {
+      showToast('Failed to update profile');
+    }
   }
 
   function updateAvatar() {
-    const data = loadData();
-    const name = data.displayName || '';
+    const name = document.getElementById('displayName').value.trim() || '';
     const avatar = document.getElementById('profileAvatar');
     avatar.textContent = name ? name.charAt(0).toUpperCase() : '?';
   }
@@ -1724,15 +2275,16 @@
   // =========================================
   //  COMMUNITY: EXPORT
   // =========================================
-  function exportSharedEntries() {
-    const data = loadData();
-    const name = data.displayName || '';
+  async function exportSharedEntries() {
+    const entries = await loadEntries();
+    const name = document.getElementById('displayName').value.trim() || '';
+
     if (!name) {
       showToast('Enter your name first so others know who you are');
       return;
     }
 
-    const shared = data.entries.filter(e => e.sharedWith ? e.sharedWith !== 'private' : e.shared);
+    const shared = entries.filter(e => e.shared_with && e.shared_with !== 'private');
     if (shared.length === 0) {
       showToast('No shared entries to export yet');
       return;
@@ -1746,7 +2298,7 @@
       entries: shared.map(e => ({
         date: e.date,
         text: e.text,
-        createdAt: e.createdAt
+        createdAt: e.created_at
       }))
     };
 
@@ -1776,7 +2328,7 @@
           return;
         }
 
-        const community = loadCommunity();
+        const community = loadCommunityLocal();
         const author = imported.author || 'Unknown';
         const colors = ['#7BAE7F', '#D4917B', '#7BA3AE', '#C8A951', '#A77BB5', '#E8A87C'];
         if (!community.members[author]) {
@@ -1786,7 +2338,7 @@
           };
         }
         community.members[author].entries = imported.entries;
-        saveCommunity(community);
+        saveCommunityLocal(community);
         showToast('Imported ' + imported.entries.length + ' entries from ' + author);
         renderCommunity();
       } catch (err) {
@@ -1797,16 +2349,28 @@
     event.target.value = '';
   }
 
+  function loadCommunityLocal() {
+    try {
+      const raw = localStorage.getItem('grateful_community');
+      if (raw) return JSON.parse(raw);
+    } catch (e) { console.warn('Failed to load community', e); }
+    return { members: {} };
+  }
+
+  function saveCommunityLocal(data) {
+    localStorage.setItem('grateful_community', JSON.stringify(data));
+  }
+
   // =========================================
   //  COMMUNITY: RENDER
   // =========================================
-  function renderCommunity() {
-    const data = loadData();
-    const community = loadCommunity();
+  async function renderCommunity() {
+    const entries = await loadEntries();
+    const community = loadCommunityLocal();
 
-    document.getElementById('displayName').value = data.displayName || '';
+    const displayName = document.getElementById('displayName').value.trim() || '';
     updateAvatar();
-    const sharedCount = data.entries.filter(e => e.sharedWith ? e.sharedWith !== 'private' : e.shared).length;
+    const sharedCount = entries.filter(e => e.shared_with && e.shared_with !== 'private').length;
     document.getElementById('sharedCount').textContent = sharedCount + ' entr' + (sharedCount === 1 ? 'y' : 'ies') + ' shared';
 
     // Members
@@ -1841,15 +2405,15 @@
       }
     }
 
-    const myName = data.displayName || 'You';
-    const myShared = data.entries.filter(e => e.sharedWith ? e.sharedWith !== 'private' : e.shared);
+    const myName = displayName || 'You';
+    const myShared = entries.filter(e => e.shared_with && e.shared_with !== 'private');
     for (const entry of myShared) {
       allFeedEntries.push({
         author: myName,
         color: '#C8A951',
         date: entry.date,
         text: entry.text,
-        createdAt: entry.createdAt,
+        createdAt: entry.created_at,
         isOwn: true
       });
     }
@@ -1860,13 +2424,11 @@
       feed.innerHTML = '<div class="community-empty">Share entries and import friends to see the feed.</div>';
     } else {
       feed.innerHTML = allFeedEntries.slice(0, 50).map(e =>
-        '<div class="feed-entry">' +
-          '<div class="feed-header">' +
+        '<div class="feed-item">' +
+          '<div class="feed-item-header">' +
             '<div class="feed-avatar" style="background:' + e.color + ';">' + e.author.charAt(0).toUpperCase() + '</div>' +
-            '<div class="feed-meta">' +
-              '<span class="feed-author">' + escapeHtml(e.author) + (e.isOwn ? ' (you)' : '') + '</span>' +
-              '<span class="feed-date">' + formatDateShort(e.date) + '</span>' +
-            '</div>' +
+            '<div class="feed-name">' + escapeHtml(e.author) + (e.isOwn ? ' (you)' : '') + '</div>' +
+            '<div class="feed-date">' + formatDateShort(e.date) + '</div>' +
           '</div>' +
           '<div class="feed-text">' + escapeHtml(e.text) + '</div>' +
         '</div>'
@@ -1875,9 +2437,9 @@
   }
 
   function removeMember(name) {
-    const community = loadCommunity();
+    const community = loadCommunityLocal();
     delete community.members[name];
-    saveCommunity(community);
+    saveCommunityLocal(community);
     showToast(name + ' removed from community');
     renderCommunity();
   }
@@ -1895,16 +2457,17 @@
   // =========================================
   //  RENDER ALL
   // =========================================
-  function renderAll() {
-    const data = loadData();
-    const entries = data.entries;
+  async function renderAll() {
+    if (!currentUser) return;
+
+    const entries = await loadEntries();
     const today = todayStr();
 
     document.getElementById('entryDate').textContent = formatDate(today);
 
     // Streak
     const streak = calcStreak(entries);
-    const best = Math.max(streak.best, data.bestStreak || 0);
+    const best = Math.max(streak.best, bestStreakCache || 0);
     document.getElementById('streakCount').textContent = streak.current;
     document.getElementById('bestStreak').textContent = best;
 
@@ -1940,12 +2503,12 @@
       addMore.style.display = 'none';
     }
 
-    if (entries.length > 0) showRandomRecall();
-    renderStats();
-    renderHistory();
+    if (entries.length > 0) await showRandomRecall();
+    await renderStats();
+    await renderHistory();
 
     // Update community badge count
-    const community = loadCommunity();
+    const community = loadCommunityLocal();
     const memberCount = Object.keys(community.members).length;
     const badge = document.getElementById('communityBadge');
     if (memberCount > 0) {
@@ -1957,11 +2520,31 @@
   }
 
   // =========================================
+  //  CLOSE DROPDOWN ON OUTSIDE CLICK
+  // =========================================
+  document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('shareDropdown');
+    if (dropdown && !dropdown.contains(e.target)) {
+      dropdown.classList.remove('open');
+    }
+  });
+
+  // =========================================
+  //  KEYBOARD SHORTCUTS
+  // =========================================
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      const input = document.getElementById('entryInput');
+      if (document.activeElement === input && input.value.trim()) saveEntry();
+    }
+  });
+
+  // =========================================
   //  INIT
   // =========================================
   initTheme();
   updateGreeting();
-  renderAll();
+  checkAuthState();
   nextQuote();
 </script>
 </body>
